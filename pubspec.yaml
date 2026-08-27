@@ -1,0 +1,88 @@
+name: bubble_sort
+description: "Bubble Sort - a premium colour-sorting puzzle."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local progress + settings only. No accounts, no network, no analytics.
+  shared_preferences: ^2.3.3
+
+  # Playback for the procedurally generated cue set in assets/audio.
+  audioplayers: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Used by the golden harness to mark its custom test declaration.
+  meta: ^1.16.0
+
+  # Both consume the artwork rendered by test/brand_assets_test.dart and slice
+  # it into platform assets. Dev-only: neither ships in the app.
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+  flutter_lints: ^5.0.0
+
+flutter:
+  # False on purpose. This game imports `flutter/widgets.dart` only — it uses no
+  # Material widget and no Material icon anywhere (the icon set is drawn by
+  # hand in lib/ui/widgets/icons.dart). Leaving this on ships
+  # MaterialIcons-Regular.otf, 1.6 MB of glyphs nothing references, in every
+  # build.
+  uses-material-design: false
+
+  assets:
+    - assets/audio/
+    - assets/levels/
+
+  fonts:
+    - family: Sora
+      fonts:
+        - asset: assets/fonts/Sora.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+
+# ---------------------------------------------------------------- launcher icon
+#
+# Source artwork is rendered from the app's own widgets - see
+# test/brand_assets_test.dart. Regenerate with:
+#   flutter test --update-goldens test/brand_assets_test.dart
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/branding/icon.png
+  android: ic_launcher
+  ios: true
+  # iOS rejects icons with an alpha channel outright.
+  remove_alpha_ios: true
+  # Adaptive icons are masked to an arbitrary shape and parallaxed, so the
+  # foreground is drawn well inside the safe zone and the ground colour is
+  # supplied separately rather than baked in.
+  adaptive_icon_background: "#0A0C12"
+  adaptive_icon_foreground: assets/branding/icon_foreground.png
+  adaptive_icon_monochrome: assets/branding/icon_foreground.png
+
+# --------------------------------------------------------------- native splash
+#
+# The point of this is continuity: the platform splash paints the same mark on
+# the same ground as the app's own boot screen, so the hand-off from system to
+# Flutter is invisible. Without it the launcher shows a white flash first, which
+# is the single most common way a polished game gives itself away at launch.
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#0A0C12"
+  image: assets/branding/splash.png
+  android: true
+  ios: true
+  web: false
+  android_12:
+    # Android 12+ ignores the legacy drawable and masks its icon to a circle.
+    color: "#0A0C12"
+    image: assets/branding/splash_android12.png
+    icon_background_color: "#0A0C12"
