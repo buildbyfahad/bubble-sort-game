@@ -6,10 +6,12 @@ import 'package:flutter/widgets.dart';
 import 'data/level_catalog.dart';
 import 'design/tokens.dart';
 import 'design/typography.dart';
+import 'services/ads_service.dart';
 import 'services/audio_service.dart';
 import 'services/haptic_service.dart';
 import 'services/progress_service.dart';
 import 'services/settings_service.dart';
+import 'services/wallet_service.dart';
 import 'ui/app_scope.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/widgets/ambient_background.dart';
@@ -44,8 +46,10 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
   LevelCatalog? _catalog;
   SettingsService? _settings;
   ProgressService? _progress;
+  WalletService? _wallet;
   AudioService? _audio;
   HapticService? _haptics;
+  AdsService? _ads;
 
   /// Held true until both the services are ready *and* a minimum display time
   /// has passed, so the opening frame is always a composed brand moment rather
@@ -65,13 +69,20 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
     final LevelCatalog catalog = await (widget.loadCatalog ?? LevelCatalog.load)();
     final SettingsService settings = await SettingsService.load();
     final ProgressService progress = await ProgressService.load(catalog.length);
+    final WalletService wallet = await WalletService.load();
     final AudioService audio = AudioService(settings);
     final HapticService haptics = HapticService(settings);
+    final AdsService ads = AdsService();
 
     // Warm the audio pool alongside the splash rather than in front of it.
     // Cues are silent until it reports ready, and the player reaching the menu
     // must never be gated on the platform's audio stack answering.
     unawaited(audio.init().then((_) => audio.startMusic()));
+
+    // Same discipline as audio: warmed alongside the splash, never in front of
+    // it. The ad SDK reaches the network, and a slow or absent network must not
+    // be able to hold the player on a logo.
+    unawaited(ads.init());
 
     _lifecycle = AppLifecycleListener(
       onHide: audio.suspend,
@@ -86,8 +97,10 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
       _catalog = catalog;
       _settings = settings;
       _progress = progress;
+      _wallet = wallet;
       _audio = audio;
       _haptics = haptics;
+      _ads = ads;
       _booting = false;
     });
   }
@@ -95,6 +108,7 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
   @override
   void dispose() {
     _lifecycle?.dispose();
+    _ads?.dispose();
     _audio?.dispose();
     super.dispose();
   }
@@ -140,8 +154,10 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
           catalog: _catalog!,
           settings: settings,
           progress: _progress!,
+          wallet: _wallet!,
           audio: _audio!,
           haptics: _haptics!,
+          ads: _ads!,
           child: scaled,
         );
       },

@@ -171,29 +171,45 @@ landing. Linear is never used.
 ## 3. Home screen
 
 ```
-      ┌──────────────────────────── ⚙ ┐   utility row, one control
-      │                                │
+      ┌ ◉ 240 │ ✦ 5 ───────────────── ⚙ ┐   balances (tap → shop), settings
+      │                                 │
       │            ▮▯▮  ●               │   animated mark (pour loop)
-      │          D E C A N T A          │   wordmark
-      │       POUR · SORT · SETTLE      │   tagline
-      │                                │
-      │  ┌──────────────────────────┐  │
-      │  │ PROGRESS                 │  │   state card
-      │  │ 4 / 10              ✦ 5  │  │
-      │  │ ▬▬▬▬▬▬▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭  │  │
-      │  └──────────────────────────┘  │
-      │  ┌──────────────────────────┐  │
-      │  │        CONTINUE          │  │   the one gold element
-      │  │  LEVEL 05 · SUSPENSION   │  │
-      │  └──────────────────────────┘  │
+      │        B U B B L E  S O R T     │   wordmark
+      │       POUR · SETTLE · SOLVE     │   tagline
+      │                                 │
+      │  ┌───────────────────────────┐  │
+      │  │ PROGRESS                  │  │   state card
+      │  │ 4 / 1000            0.4%  │  │
+      │  │ ▬▬▬▬▬▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭  │  │
+      │  └───────────────────────────┘  │
+      │  ┌───────────────────────────┐  │
+      │  │ 🔥 Daily reward ready   › │  │   gold when live, grey when done
+      │  └───────────────────────────┘  │
+      │  ┌───────────────────────────┐  │
+      │  │         CONTINUE          │  │   the one gold element
+      │  │  LEVEL 05 · SUSPENSION    │  │
+      │  └───────────────────────────┘  │
       │          ▯ The road             │   quiet secondary
-      └────────────────────────────────┘
+      └─────────────────────────────────┘
 ```
 
 Weighted 4:6 rather than centred, so the identity block lands in the optical
-upper third and the action block owns the bottom. Everything a home screen
-usually accumulates — a shop, a daily reward, four badges, a spinning coin — is
-absent, and the resulting hierarchy is what makes it read as expensive.
+upper third and the action block owns the bottom.
+
+The economy is deliberately kept to the **edges** of that composition —
+balances in the utility row, the daily on one strip — rather than given cards
+of its own. This is the compromise that took the longest to get right: the
+screen has to carry a shop, a wallet and a streak without turning into the four
+competing reward widgets and a logo that every game in the category has. The
+rule that made it work is that only one thing on the screen is gold at a time.
+When the daily is unclaimed it is a lit gold strip with a chevron, because it
+is a thing to do; once claimed it drops to a grey line of text, because it is a
+thing already done. Giving both states the same weight is how a menu ends up
+permanently shouting about something the player dealt with an hour ago.
+
+The hint count used to sit in the state card as well. It moved into the balance
+pill when coins arrived — two readouts of one number on a single screen is the
+first step towards a dashboard.
 
 The ambient background is pushed hardest here (`intensity: 1.9`). The menu is
 mostly negative space by design, and unlit negative space reads as an empty

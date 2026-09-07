@@ -1,15 +1,17 @@
 import 'package:flutter/widgets.dart';
 
 import '../data/level_catalog.dart';
+import '../services/ads_service.dart';
 import '../services/audio_service.dart';
 import '../services/haptic_service.dart';
 import '../services/progress_service.dart';
 import '../services/settings_service.dart';
+import '../services/wallet_service.dart';
 
-/// The four long-lived services, handed down the tree.
+/// The long-lived services, handed down the tree.
 ///
 /// Deliberately not a state-management framework: this game has exactly one
-/// player, no server, and four singletons. An inherited widget over
+/// player, no server, and a handful of singletons. An inherited widget over
 /// [ChangeNotifier]s is the whole requirement, and keeping it that small is
 /// what keeps the frame budget for the board.
 class AppScope extends InheritedWidget {
@@ -18,16 +20,20 @@ class AppScope extends InheritedWidget {
     required this.catalog,
     required this.settings,
     required this.progress,
+    required this.wallet,
     required this.audio,
     required this.haptics,
+    required this.ads,
     required super.child,
   });
 
   final LevelCatalog catalog;
   final SettingsService settings;
   final ProgressService progress;
+  final WalletService wallet;
   final AudioService audio;
   final HapticService haptics;
+  final AdsService ads;
 
   static AppScope of(BuildContext context) {
     final AppScope? scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
@@ -40,8 +46,10 @@ class AppScope extends InheritedWidget {
       catalog != old.catalog ||
       settings != old.settings ||
       progress != old.progress ||
+      wallet != old.wallet ||
       audio != old.audio ||
-      haptics != old.haptics;
+      haptics != old.haptics ||
+      ads != old.ads;
 }
 
 /// Rebuilds [builder] whenever any of the given notifiers fire. Saves wiring

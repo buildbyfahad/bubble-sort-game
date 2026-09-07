@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:bubble_sort/data/level_catalog.dart';
+import 'package:bubble_sort/services/ads_service.dart';
 import 'package:bubble_sort/services/audio_service.dart';
 import 'package:bubble_sort/services/haptic_service.dart';
 import 'package:bubble_sort/services/progress_service.dart';
 import 'package:bubble_sort/services/settings_service.dart';
+import 'package:bubble_sort/services/wallet_service.dart';
 import 'package:bubble_sort/ui/app_scope.dart';
 import 'package:bubble_sort/design/tokens.dart';
 import 'package:bubble_sort/design/typography.dart';
@@ -60,22 +62,43 @@ LevelCatalog? _catalog;
 LevelCatalog loadCatalog() =>
     _catalog ??= LevelCatalog.fromRaw(File(LevelCatalog.assetPath).readAsStringSync());
 
+/// Days since the epoch in local time — the same figure [WalletService] keys
+/// the daily reward on. Public so tests that boot the whole app can seed a
+/// wallet that has already claimed today.
+int todayIndex([DateTime Function()? clock]) {
+  final DateTime n = (clock ?? DateTime.now)();
+  return DateTime(n.year, n.month, n.day).difference(DateTime(1970)).inDays;
+}
+
 /// Builds a real [AppScope] over mocked preferences, so screens under test see
 /// the same services they see in the app.
 Future<AppScope> buildScope({
   required Widget child,
   Map<String, Object> prefs = const <String, Object>{},
+  DateTime Function()? clock,
 }) async {
-  SharedPreferences.setMockInitialValues(prefs);
+  // Screens under test are given a wallet that has already claimed today,
+  // unless the test says otherwise. The home screen offers the daily reward on
+  // first build, and a sheet rising over every golden and every navigation
+  // test would make each of them a test of the daily reward instead of what it
+  // was written for. The auto-offer has its own test.
+  final Map<String, Object> seeded = <String, Object>{
+    if (!prefs.containsKey('wallet.lastClaimDay')) 'wallet.lastClaimDay': todayIndex(clock),
+    ...prefs,
+  };
+  SharedPreferences.setMockInitialValues(seeded);
   final LevelCatalog catalog = loadCatalog();
   final SettingsService settings = await SettingsService.load();
   final ProgressService progress = await ProgressService.load(catalog.length);
+  final WalletService wallet = await WalletService.load(clock: clock);
   return AppScope(
     catalog: catalog,
     settings: settings,
     progress: progress,
+    wallet: wallet,
     audio: AudioService(settings),
     haptics: HapticService(settings),
+    ads: AdsService(),
     child: child,
   );
 }
@@ -106,11 +129,14 @@ Widget harness(Widget child) => Directionality(
     );
 
 /// Runs out any timer the app left armed — staggered entrance delays, and the
-/// bounded timeout guarding audio initialisation, which never resolves in a
-/// test because no platform is there to answer it. The binding asserts no
-/// timers are pending when a test ends.
+/// bounded timeouts guarding audio and ad initialisation, neither of which
+/// resolves in a test because no platform is there to answer them. The binding
+/// asserts no timers are pending when a test ends.
+///
+/// Must stay longer than the longest of those guards (audio 8s, ads 10s), or
+/// tests fail on a pending timer that the app is deliberately holding.
 Future<void> drainTimers(WidgetTester tester) async {
-  await tester.pump(const Duration(seconds: 6));
+  await tester.pump(const Duration(seconds: 12));
   await tester.pump();
 }
 

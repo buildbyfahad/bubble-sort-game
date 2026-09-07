@@ -87,12 +87,19 @@ class RiseIn extends StatefulWidget {
 }
 
 class _RiseInState extends State<RiseIn> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+  // Constructed eagerly in initState rather than lazily on first read.
+  //
+  // The entrance is delayed, so a screen dismissed inside its own stagger
+  // window never reads `_c` at all — and `dispose()` would then be the first
+  // access, building an AnimationController against an element that has
+  // already been deactivated. That throws, and it throws on the fast
+  // navigation that is hardest to reproduce and most likely in a game.
+  late final AnimationController _c;
 
   @override
   void initState() {
     super.initState();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
     Future<void>.delayed(widget.delay + widget.stagger * widget.index, () {
       if (mounted) _c.forward();
     });

@@ -25,6 +25,19 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- AdMob application id.
+             THIS IS GOOGLE'S PUBLIC TEST ID. Replace it with the application id
+             from your own AdMob account before release, together with the
+             rewarded unit ids in lib/services/ads_service.dart.
+
+             Not optional and not lazily checked: the Google Mobile Ads SDK
+             reads this at process start and throws if it is missing or
+             malformed, so a wrong value here is a crash on launch, not a
+             failure to show an ad. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

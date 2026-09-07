@@ -54,8 +54,10 @@ flutter run                       # attached device or emulator
 flutter build apk --release       # or: flutter build appbundle
 ```
 
-Portrait only, Android and iOS targets, no network permissions, no accounts, no
-analytics.
+Portrait only, Android and iOS. No accounts and no analytics. Progress, coins
+and the daily streak all live in local storage; the only network traffic the
+app makes is a rewarded-video request, and only when a player taps a button
+asking for one.
 
 ---
 
@@ -162,6 +164,44 @@ cycles inside its length, which is what lets it repeat without a seam.
 
 ---
 
+## The reward loop
+
+Three systems, all local except the last:
+
+**Coins.** Every clear pays out, scaled by grade — 50 for a flawless line, 30
+for a good one, 15 otherwise. A *replay* pays 5 whatever the grade, which is
+the important number: paying nothing makes replaying a solved board feel
+pointless, and paying full rate turns level 1 into an ATM the moment a player
+notices.
+
+**The daily streak.** A seven-rung ladder that escalates across the week and
+returns to the foot of it on the eighth day, so there is always a visible next
+rung. Claiming is a date written to disk — days since the epoch in *local*
+time, deliberately not UTC, or a player west of Greenwich loses a streak they
+turned up for. Missing a day reads as broken immediately rather than showing a
+stale number until the next claim silently resets it.
+
+**Rewarded video, and only rewarded video.** There is no banner and no
+interstitial. Every ad is one the player asked for by tapping a button that
+says what they get, nothing interrupts a board, and nothing plays between
+levels. That costs several times the revenue of an interstitial after each
+clear and buys the unhurried feel the rest of the game is built on.
+
+The shop sells hints and nothing else — never progress. See
+[`wallet_service.dart`](lib/services/wallet_service.dart) and
+[`ads_service.dart`](lib/services/ads_service.dart).
+
+> **Before release** the AdMob ids are Google's public test ids and earn
+> nothing. Three places need your own: the rewarded unit ids in
+> `lib/services/ads_service.dart`, plus the application ids in
+> `android/app/src/main/AndroidManifest.xml` and `ios/Runner/Info.plist`. The
+> SDK reads those two at process start, so a missing or malformed value is a
+> crash on launch rather than a failure to show an ad. Shipping ads also
+> requires a privacy policy URL, Play Data Safety answers, and an iOS App
+> Tracking Transparency prompt.
+
+---
+
 ## Tests
 
 ```bash
@@ -183,6 +223,13 @@ of the real screens, driving them through real taps — the shatter shot walks
 the solver's line until a vessel seals and stops inside the celebration. It
 doubles as coverage: it is what caught the board pushing a lifted stack off the
 top of the screen on height-bound boards.
+
+**`wallet_test.dart`** covers the economy, and most of it is the streak —
+the only part of the game whose behaviour depends on the calendar, and so the
+only part whose bugs are invisible in testing and infuriating a day later. It
+checks that a missed day breaks the streak, that a second claim on one day pays
+nothing, that the seventh-day prize is actually reachable by claiming seven
+days running, and that a streak survives crossing a month boundary.
 
 **`controller_test.dart`** covers pacing rather than rules: that a tap arriving
 mid-flight is queued instead of dropped, that two chained pours leave no idle

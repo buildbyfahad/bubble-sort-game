@@ -48,7 +48,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
     _confirmTimer?.cancel();
     setState(() => _confirmingReset = false);
     scope.haptics.seal();
+    // Both stores. The button says "erase everything", and a reset that leaves
+    // the player's coins and streak behind is a lie about what it did.
     await scope.progress.resetAll();
+    await scope.wallet.resetAll();
   }
 
   @override

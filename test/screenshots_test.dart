@@ -166,6 +166,7 @@ void main() {
         best: 11,
         improved: true,
         hintsAwarded: 1,
+        coinsAwarded: 50,
         overallBefore: 0.026,
         overallAfter: 0.028,
         hasNext: true,

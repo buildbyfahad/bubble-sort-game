@@ -6,7 +6,9 @@ import 'package:bubble_sort/services/settings_service.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
 import 'package:bubble_sort/ui/screens/level_complete.dart';
 import 'package:bubble_sort/ui/screens/home_screen.dart';
+import 'package:bubble_sort/ui/screens/daily_sheet.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
+import 'package:bubble_sort/ui/screens/shop_sheet.dart';
 import 'package:bubble_sort/ui/screens/settings_sheet.dart';
 import 'package:bubble_sort/ui/widgets/board_view.dart';
 import 'dart:async';
@@ -215,6 +217,7 @@ void main() {
         best: 11,
         improved: true,
         hintsAwarded: 1,
+        coinsAwarded: 50,
         overallBefore: 0.4,
         overallAfter: 0.5,
         hasNext: true,
@@ -245,6 +248,30 @@ void main() {
     )));
     await settle(tester, steps: 20);
     await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/levels.png'));
+  });
+
+  renderTest('daily reward — unclaimed, mid-streak', (WidgetTester tester) async {
+    useHandset(tester);
+    await tester.pumpWidget(harness(await buildScope(
+      child: const DailyRewardSheet(),
+      prefs: <String, Object>{
+        'wallet.streak': 3,
+        'wallet.lastClaimDay': todayIndex() - 1,
+        'wallet.coins': 240,
+      },
+    )));
+    await settle(tester, steps: 14);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/daily.png'));
+  });
+
+  renderTest('shop', (WidgetTester tester) async {
+    useHandset(tester);
+    await tester.pumpWidget(harness(await buildScope(
+      child: const ShopSheet(),
+      prefs: <String, Object>{'wallet.coins': 340, 'wallet.hints': 2},
+    )));
+    await settle(tester, steps: 14);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/shop.png'));
   });
 
   renderTest('settings', (WidgetTester tester) async {

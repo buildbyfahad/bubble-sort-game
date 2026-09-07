@@ -4,6 +4,7 @@ import '../../data/level.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../engine/game_controller.dart';
+import '../../services/wallet_service.dart';
 import '../app_scope.dart';
 import '../transitions.dart';
 import '../widgets/ambient_background.dart';
@@ -12,6 +13,7 @@ import '../widgets/buttons.dart';
 import '../widgets/icons.dart';
 import '../widgets/surfaces.dart';
 import 'level_complete.dart';
+import 'shop_sheet.dart';
 import 'settings_sheet.dart';
 
 /// Gameplay.
@@ -116,7 +118,18 @@ class _GameScreenState extends State<GameScreen> {
     final double before = _scope.progress.completion;
     final bool firstClear = !_scope.progress.isCleared(level.id);
     final bool improved = await _scope.progress.recordClear(level.id, _controller.moves);
-    if (firstClear) await _scope.progress.grantHints(1);
+
+    // Pay the board out. A replay pays a token amount rather than the full
+    // rate — see WalletService.payoutFor for why the difference matters.
+    final ClearGrade grade = gradeFor(_controller.moves, level.par);
+    final int coins = WalletService.payoutFor(
+      flawless: grade == ClearGrade.flawless,
+      great: grade == ClearGrade.great,
+      firstClear: firstClear,
+    );
+    await _scope.wallet.grantCoins(coins);
+    if (firstClear) await _scope.wallet.grantHints(1);
+
     final double after = _scope.progress.completion;
     if (!mounted) return;
 
@@ -129,6 +142,7 @@ class _GameScreenState extends State<GameScreen> {
           best: _scope.progress.bestFor(level.id) ?? _controller.moves,
           improved: improved,
           hintsAwarded: firstClear ? 1 : 0,
+          coinsAwarded: coins,
           overallBefore: before,
           overallAfter: after,
           hasNext: level.id < _scope.catalog.length,
@@ -161,7 +175,18 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _hint() async {
     if (_controller.hintPending) return;
-    final bool spent = await _scope.progress.spendHint();
+
+    // Out of hints is the one moment the player actively wants what the shop
+    // sells, so it opens the shop rather than buzzing at them. A dead button
+    // at the exact point of need is the most annoying way to run an economy.
+    if (_scope.wallet.hints <= 0) {
+      _scope.haptics.reject();
+      _scope.audio.tap();
+      await Navigator.of(context).push(sheetRoute<void>(const ShopSheet()));
+      return;
+    }
+
+    final bool spent = await _scope.wallet.spendHint();
     if (!spent) {
       _scope.haptics.reject();
       _scope.audio.reject();
@@ -181,7 +206,12 @@ class _GameScreenState extends State<GameScreen> {
       intensity: 0.55,
       child: SafeArea(
         child: Observes(
-          listenables: <Listenable>[_controller, _scope.settings, _scope.progress],
+          listenables: <Listenable>[
+            _controller,
+            _scope.settings,
+            _scope.progress,
+            _scope.wallet,
+          ],
           builder: (BuildContext context) {
             final int sealed = _controller.state.sealedCount;
 
@@ -256,10 +286,11 @@ class _GameScreenState extends State<GameScreen> {
                             icon: DIcons.hint,
                             label: 'Hint',
                             accent: DS.gold,
-                            badge: _scope.progress.hints,
+                            badge: _scope.wallet.hints,
                             busy: _controller.hintPending,
-                            enabled: _scope.progress.hints > 0 &&
-                                _controller.status != GameStatus.solved,
+                            // Deliberately still enabled at zero hints: the
+                            // tap opens the shop instead of spending.
+                            enabled: _controller.status != GameStatus.solved,
                             onTap: _hint,
                           ),
                           _DockDivider(),

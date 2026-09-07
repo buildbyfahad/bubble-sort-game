@@ -51,6 +51,7 @@ class LevelCompleteSheet extends StatefulWidget {
     required this.best,
     required this.improved,
     required this.hintsAwarded,
+    required this.coinsAwarded,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -64,6 +65,7 @@ class LevelCompleteSheet extends StatefulWidget {
   final int best;
   final bool improved;
   final int hintsAwarded;
+  final int coinsAwarded;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -111,7 +113,8 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
       (0.20, scope.audio.star),
       // Five ticks under the counters as they run.
       for (int i = 0; i < 5; i++) (0.26 + i * 0.035, scope.audio.tick),
-      // The hint award, when there is one.
+      // The coin payout, and the hint a first clear grants.
+      if (widget.coinsAwarded > 0) (0.46, scope.audio.star),
       if (widget.hintsAwarded > 0) (0.52, scope.audio.star),
       // Finishing the last level of a chapter is the game's only milestone
       // above a single board, and until now it sounded exactly like the
@@ -222,9 +225,32 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
                       ],
                     ),
 
-                    if (widget.hintsAwarded > 0) ...<Widget>[
+                    if (widget.coinsAwarded > 0 || widget.hintsAwarded > 0) ...<Widget>[
                       const SizedBox(height: DS.s20),
-                      Center(child: _HintReward(count: widget.hintsAwarded, animation: _c)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          if (widget.coinsAwarded > 0)
+                            _Reward(
+                              icon: DIcons.coin,
+                              label: '+${widget.coinsAwarded}',
+                              accent: DS.gold,
+                              animation: _c,
+                              start: 0.46,
+                            ),
+                          if (widget.coinsAwarded > 0 && widget.hintsAwarded > 0)
+                            const SizedBox(width: DS.s8),
+                          if (widget.hintsAwarded > 0)
+                            _Reward(
+                              icon: DIcons.hint,
+                              label: '+${widget.hintsAwarded} '
+                                  'hint${widget.hintsAwarded == 1 ? '' : 's'}',
+                              accent: DS.aqua,
+                              animation: _c,
+                              start: 0.52,
+                            ),
+                        ],
+                      ),
                     ],
 
                     const SizedBox(height: DS.s24),
@@ -398,37 +424,50 @@ class _StatDivider extends StatelessWidget {
       );
 }
 
-class _HintReward extends StatelessWidget {
-  const _HintReward({required this.count, required this.animation});
+/// A reward pill — the coins a board paid out, or the hint a first clear
+/// granted. Arrives late and with a small overshoot, after the stats have
+/// finished counting, so it reads as a bonus on top of the result rather than
+/// as another statistic.
+class _Reward extends StatelessWidget {
+  const _Reward({
+    required this.icon,
+    required this.label,
+    required this.accent,
+    required this.animation,
+    required this.start,
+  });
 
-  final int count;
+  final DIcons icon;
+  final String label;
+  final Color accent;
   final Animation<double> animation;
+  final double start;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
         animation: animation,
         builder: (BuildContext context, _) {
-          final double t = ((animation.value - 0.5) / 0.35).clamp(0.0, 1.0);
+          final double t = ((animation.value - start) / 0.30).clamp(0.0, 1.0);
           final double e = Ease.overshoot.transform(t);
           return Opacity(
-            opacity: t.clamp(0.0, 1.0),
+            opacity: t,
             child: Transform.scale(
               scale: 0.8 + e * 0.2,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(DS.rPill),
-                  color: DS.gold.withValues(alpha: 0.10),
-                  border: Border.all(color: DS.gold.withValues(alpha: 0.28)),
+                  color: accent.withValues(alpha: 0.10),
+                  border: Border.all(color: accent.withValues(alpha: 0.28)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const DIcon(DIcons.hint, size: 15, color: DS.gold),
+                    DIcon(icon, size: 15, color: accent),
                     const SizedBox(width: DS.s8),
                     Text(
-                      '+$count hint${count == 1 ? '' : 's'}',
-                      style: Type.bodyStrong.copyWith(color: DS.gold, fontSize: 13),
+                      label,
+                      style: Type.bodyStrong.copyWith(color: accent, fontSize: 13),
                     ),
                   ],
                 ),

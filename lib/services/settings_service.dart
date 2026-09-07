@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Player-facing preferences. Deliberately short — four switches, no menu
-/// tree. Everything is stored locally; there is no account and no network.
+/// tree. Every preference is stored locally and there is no account. The only
+/// network traffic the app makes at all is the rewarded-video request, and
+/// that happens solely when a player taps a button asking for one.
 class SettingsService extends ChangeNotifier {
   SettingsService._(this._prefs)
       : _sound = _prefs.getBool(_kSound) ?? true,

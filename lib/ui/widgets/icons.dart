@@ -9,7 +9,7 @@ import 'package:flutter/widgets.dart';
 /// weight. These are all built on one grid with one stroke width, round caps
 /// and round joins, so they read as a family and match the rounded geometry of
 /// the vessels and buttons.
-enum DIcons { back, settings, undo, hint, restart, close, next, lock, check, sound, mute, grid, map, music, vibrate, eye }
+enum DIcons { back, settings, undo, hint, restart, close, next, lock, check, sound, mute, grid, map, music, vibrate, eye, coin, flame, play }
 
 class DIcon extends StatelessWidget {
   const DIcon(this.icon, {super.key, this.size = 22, this.color = const Color(0xFFF2F4F8), this.weight = 1.9});
@@ -190,6 +190,51 @@ class _IconPainter extends CustomPainter {
         canvas.drawLine(p(9.5, 6), p(18, 4.2), stroke);
         canvas.drawCircle(p(7.4, 17.4), 2.6 * u, fill);
         canvas.drawCircle(p(15.9, 15.4), 2.6 * u, fill);
+
+      case DIcons.coin:
+        // A struck token: an outer rim with a solid boss in the middle. Not a
+        // currency glyph — a "$" or a "¢" would name a real currency, and
+        // these are not money.
+        //
+        // Built from two solid shapes rather than by punching a hole through
+        // the disc: this paints straight onto the parent layer, so a
+        // BlendMode.clear here erases the background behind the icon rather
+        // than the face of the coin.
+        canvas.drawCircle(
+          p(12, 12),
+          8.4 * u,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = weight * u,
+        );
+        canvas.drawCircle(p(12, 12), 4.0 * u, fill);
+
+      case DIcons.flame:
+        // The streak marker. A single teardrop with one lick off the side —
+        // a many-tongued fire turns to noise at badge size.
+        canvas.drawPath(
+          Path()
+            ..moveTo(12 * u, 3 * u)
+            ..cubicTo(17.5 * u, 8 * u, 19 * u, 11.5 * u, 19 * u, 14.2 * u)
+            ..cubicTo(19 * u, 18.5 * u, 15.9 * u, 21 * u, 12 * u, 21 * u)
+            ..cubicTo(8.1 * u, 21 * u, 5 * u, 18.5 * u, 5 * u, 14.2 * u)
+            ..cubicTo(5 * u, 11 * u, 7.5 * u, 8.5 * u, 9.5 * u, 6 * u)
+            ..cubicTo(10 * u, 8.8 * u, 11 * u, 10 * u, 12.4 * u, 10.6 * u)
+            ..cubicTo(12.2 * u, 7.6 * u, 12 * u, 5.2 * u, 12 * u, 3 * u)
+            ..close(),
+          fill,
+        );
+
+      case DIcons.play:
+        canvas.drawPath(
+          Path()
+            ..moveTo(8 * u, 5 * u)
+            ..lineTo(19 * u, 12 * u)
+            ..lineTo(8 * u, 19 * u)
+            ..close(),
+          fill,
+        );
 
       case DIcons.map:
         // A road with three stops on it — the levels screen's own subject,

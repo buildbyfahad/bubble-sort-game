@@ -1,8 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Persisted progress: which levels are cleared, in how many pours, and how
-/// many hints the player is holding.
+/// Persisted progress: which levels are cleared and in how many pours.
+///
+/// Coins, hints and the daily streak live in [WalletService] instead. The
+/// split is between what the player has *done* and what they *have* — the
+/// second set is the reward loop and changes far more often than the rules of
+/// play, and letting the two share a service means every tweak to the economy
+/// reaches into the record of the game.
 ///
 /// Kept separate from the game engine so a level can be played, replayed or
 /// previewed without touching saved state until the player actually wins.
@@ -21,7 +26,6 @@ class ProgressService extends ChangeNotifier {
   }
 
   static const String _kBest = 'progress.best.';
-  static const String _kHints = 'progress.hints';
   static const String _kSeenTutorial = 'progress.seenTutorial';
 
   final SharedPreferences _prefs;
@@ -60,28 +64,10 @@ class ProgressService extends ChangeNotifier {
     return n;
   }
 
-  /// Hints start stocked so the mechanic is discoverable, and are topped up by
-  /// clearing levels. No purchase path - this is a currency for pacing, not
-  /// monetisation.
-  int get hints => _prefs.getInt(_kHints) ?? 3;
-
   bool get seenTutorial => _prefs.getBool(_kSeenTutorial) ?? false;
 
   Future<void> markTutorialSeen() async {
     await _prefs.setBool(_kSeenTutorial, true);
-    notifyListeners();
-  }
-
-  Future<bool> spendHint() async {
-    final int h = hints;
-    if (h <= 0) return false;
-    await _prefs.setInt(_kHints, h - 1);
-    notifyListeners();
-    return true;
-  }
-
-  Future<void> grantHints(int n) async {
-    await _prefs.setInt(_kHints, hints + n);
     notifyListeners();
   }
 
@@ -103,7 +89,6 @@ class ProgressService extends ChangeNotifier {
       await _prefs.remove('$_kBest$i');
     }
     _cleared.clear();
-    await _prefs.remove(_kHints);
     await _prefs.remove(_kSeenTutorial);
     _currentLevelId = 1;
     notifyListeners();

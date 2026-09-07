@@ -1,6 +1,8 @@
 import 'package:bubble_sort/app.dart';
 import 'package:bubble_sort/data/level_catalog.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
+import 'package:bubble_sort/services/wallet_service.dart';
+import 'package:bubble_sort/ui/screens/daily_sheet.dart';
 import 'package:bubble_sort/ui/screens/home_screen.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
 import 'package:bubble_sort/ui/screens/settings_sheet.dart';
@@ -21,8 +23,16 @@ import 'render_harness.dart';
 void main() {
   setUpAll(loadAppFonts);
 
-  Future<void> boot(WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  /// Boots the real app.
+  ///
+  /// The wallet is seeded as already-claimed-today by default: the home screen
+  /// offers the daily reward on first build, and a sheet over the menu would
+  /// turn every test below into a test of the daily reward. Pass
+  /// `dailyReady: true` to exercise that path deliberately.
+  Future<void> boot(WidgetTester tester, {bool dailyReady = false}) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      if (!dailyReady) 'wallet.lastClaimDay': todayIndex(),
+    });
     final LevelCatalog catalog = loadCatalog();
     await tester.pumpWidget(
       BubbleSortApp(loadCatalog: () async => catalog),
@@ -31,6 +41,29 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1400));
     await settle(tester, steps: 16);
   }
+
+  testWidgets('the daily reward is offered on launch, and pays out',
+      (WidgetTester tester) async {
+    useHandset(tester);
+    await boot(tester, dailyReady: true);
+
+    // Offered without being asked for — this is the game's day-2 hook, and it
+    // has to arrive on its own.
+    expect(find.byType(DailyRewardSheet), findsOneWidget);
+    expect(find.text('CLAIM'), findsOneWidget);
+
+    await tester.tap(find.text('CLAIM'));
+    await settle(tester, steps: 20);
+
+    // Day one of the ladder.
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('wallet.coins'), WalletService.rewardFor(1).coins);
+    expect(prefs.getInt('wallet.streak'), 1);
+
+    // And it cannot be taken twice.
+    expect(find.text('CLAIM'), findsNothing);
+    await drainTimers(tester);
+  });
 
   testWidgets('the app boots into the menu', (WidgetTester tester) async {
     useHandset(tester);
