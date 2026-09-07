@@ -6,6 +6,7 @@ import '../app_scope.dart';
 import '../transitions.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/buttons.dart';
+import '../widgets/drifting_bubbles.dart';
 import '../widgets/icons.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/logo.dart';
@@ -74,7 +75,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // atmosphere.
     return AmbientBackground(
       intensity: 1.9,
-      child: SafeArea(
+      child: Stack(
+        children: <Widget>[
+          // Behind everything, and only on the menu. The board has its own
+          // motion and does not need atmosphere competing with it.
+          const Positioned.fill(child: DriftingBubbles()),
+          SafeArea(
         child: Observes(
           listenables: <Listenable>[scope.progress, scope.wallet],
           builder: (BuildContext context) {
@@ -145,7 +151,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   // --- state ------------------------------------------------
                   RiseIn(
                     index: 2,
-                    child: SoftCard(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      // The card *is* the map's summary, so it opens the map.
+                      // A separate labelled button underneath was a second
+                      // route to the same place and one more thing competing
+                      // with the only control that matters here.
+                      onTap: () {
+                        scope.audio.whoosh();
+                        Navigator.of(context).push(riseRoute<void>(const LevelsScreen()));
+                      },
+                      child: SoftCard(
                       padding: const EdgeInsets.fromLTRB(DS.s20, DS.s16, DS.s20, DS.s20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +204,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: DS.s16),
                           ProgressTrack(value: scope.progress.completion),
+                          const SizedBox(height: DS.s12),
+                          Row(
+                            children: <Widget>[
+                              const DIcon(DIcons.map, size: 13, color: DS.textTertiary),
+                              const SizedBox(width: DS.s8),
+                              Text('VIEW THE ROAD', style: Type.label),
+                              const Spacer(),
+                              const DIcon(DIcons.next, size: 12, color: DS.textTertiary),
+                            ],
+                          ),
                         ],
+                      ),
                       ),
                     ),
                   ),
@@ -224,28 +251,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: DS.s16),
-
-                  RiseIn(
-                    index: 5,
-                    child: Center(
-                      child: TextAction(
-                        icon: DIcons.map,
-                        label: 'The road',
-                        onTap: () {
-                          scope.audio.whoosh();
-                          Navigator.of(context).push(riseRoute<void>(const LevelsScreen()));
-                        },
-                      ),
-                    ),
-                  ),
-
                   const SizedBox(height: DS.s32),
                 ],
               ),
             );
           },
         ),
+      ),
+        ],
       ),
     );
   }

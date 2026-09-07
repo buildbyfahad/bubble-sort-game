@@ -37,34 +37,48 @@ const path = require('path');
 // capacity; 5 is reserved for chapters with fewer colours, because a tall
 // board and a wide board at the same time does not fit a phone.
 const CHAPTERS = [
-  { name: 'First Pours',   colors: [2, 4],   empties: 2, k: 4 },
-  { name: 'Settling',      colors: [4, 5],   empties: 2, k: 4 },
-  { name: 'Decanting',     colors: [5, 6],   empties: 2, k: 4 },
-  { name: 'Sediment',      colors: [6, 6],   empties: 2, k: 4 },
-  { name: 'Meniscus',      colors: [6, 7],   empties: 2, k: 4 },
-  { name: 'Narrow Room',   colors: [6, 7],   empties: 1, k: 4 },
-  { name: 'Suspension',    colors: [7, 8],   empties: 2, k: 4 },
-  { name: 'Deep Vessels',  colors: [7, 8],   empties: 2, k: 5 },
-  { name: 'Titration',     colors: [8, 8],   empties: 1, k: 4 },
-  { name: 'Cascade',       colors: [8, 9],   empties: 2, k: 4 },
-  { name: 'Decant Deeper', colors: [8, 9],   empties: 2, k: 5 },
-  { name: 'Residue',       colors: [9, 9],   empties: 1, k: 4 },
-  { name: 'Emulsion',      colors: [9, 10],  empties: 2, k: 4 },
-  { name: 'Column',        colors: [9, 10],  empties: 2, k: 5 },
-  { name: 'Filtrate',      colors: [10, 10], empties: 1, k: 4 },
-  { name: 'Solvent',       colors: [10, 11], empties: 2, k: 4 },
-  { name: 'Reflux',        colors: [10, 10], empties: 2, k: 5 },
-  { name: 'Precipitate',   colors: [11, 11], empties: 1, k: 4 },
-  { name: 'Fractions',     colors: [11, 12], empties: 2, k: 4 },
-  { name: 'Saturation',    colors: [12, 12], empties: 2, k: 4 },
-  { name: 'Distillate',    colors: [11, 11], empties: 2, k: 5 },
-  { name: 'Supernatant',   colors: [12, 12], empties: 1, k: 4 },
-  { name: 'Crystalline',   colors: [12, 12], empties: 2, k: 5 },
-  { name: 'Azeotrope',     colors: [11, 11], empties: 1, k: 5 },
-  { name: 'Equilibrium',   colors: [12, 12], empties: 1, k: 5 },
+  // Early chapters are deliberately SHORT. The opening used to be forty levels
+  // of two and three colours with two spare vessels, which is around thirty
+  // levels of a game that cannot be lost — play-testing bounced off exactly
+  // there, still bored at level 30. A tutorial that outstays its welcome is
+  // the most expensive mistake in the genre, because the player quits before
+  // reaching anything that was designed.
+  //
+  // Two things fix it. Chapters 1-3 are 12, 18 and 20 levels rather than 40,
+  // so the ramp arrives sooner and the player also *finishes* something early.
+  // And the single spare vessel — the biggest difficulty lever there is,
+  // bigger than adding a colour — now appears at level 31 instead of 201.
+  { name: 'First Pours',   count: 12, colors: [2, 4],   empties: 2, k: 4 },
+  { name: 'Settling',      count: 18, colors: [4, 5],   empties: 2, k: 4 },
+  { name: 'Narrow Room',   count: 20, colors: [4, 5],   empties: 1, k: 4 },
+  { name: 'Decanting',     count: 25, colors: [5, 6],   empties: 2, k: 4 },
+  { name: 'Sediment',      count: 25, colors: [6, 6],   empties: 1, k: 4 },
+  { name: 'Meniscus',      count: 30, colors: [6, 7],   empties: 2, k: 4 },
+  { name: 'Deep Vessels',  count: 30, colors: [6, 7],   empties: 2, k: 5 },
+  { name: 'Suspension',    count: 35, colors: [7, 7],   empties: 1, k: 4 },
+  { name: 'Titration',     count: 35, colors: [7, 8],   empties: 2, k: 4 },
+  { name: 'Cascade',       count: 40, colors: [8, 8],   empties: 1, k: 4 },
+  { name: 'Decant Deeper', count: 40, colors: [8, 9],   empties: 2, k: 5 },
+  { name: 'Residue',       count: 40, colors: [9, 9],   empties: 1, k: 4 },
+  { name: 'Emulsion',      count: 45, colors: [9, 10],  empties: 2, k: 4 },
+  { name: 'Column',        count: 45, colors: [9, 10],  empties: 2, k: 5 },
+  { name: 'Filtrate',      count: 45, colors: [10, 10], empties: 1, k: 4 },
+  { name: 'Solvent',       count: 45, colors: [10, 11], empties: 2, k: 4 },
+  { name: 'Reflux',        count: 45, colors: [10, 10], empties: 2, k: 5 },
+  { name: 'Precipitate',   count: 45, colors: [11, 11], empties: 1, k: 4 },
+  { name: 'Fractions',     count: 45, colors: [11, 12], empties: 2, k: 4 },
+  { name: 'Saturation',    count: 45, colors: [12, 12], empties: 2, k: 4 },
+  { name: 'Distillate',    count: 45, colors: [11, 11], empties: 2, k: 5 },
+  { name: 'Supernatant',   count: 60, colors: [12, 12], empties: 1, k: 4 },
+  { name: 'Crystalline',   count: 60, colors: [12, 12], empties: 2, k: 5 },
+  { name: 'Azeotrope',     count: 60, colors: [11, 11], empties: 1, k: 5 },
+  { name: 'Equilibrium',   count: 65, colors: [12, 12], empties: 1, k: 5 },
 ];
 
-const PER_CHAPTER = 40;
+const PER_CHAPTER = 40; // legacy default, only used if a chapter omits `count`
+
+/// Total levels the table asks for.
+const PLANNED = CHAPTERS.reduce((n, c) => n + (c.count || PER_CHAPTER), 0);
 
 // ------------------------------------------------------------------- prng
 function rng(seed) {
@@ -305,7 +319,7 @@ const argOf = (flag, fallback) => {
   const i = argv.indexOf(flag);
   return i >= 0 ? argv[i + 1] : fallback;
 };
-const TOTAL = parseInt(argOf('--levels', String(CHAPTERS.length * PER_CHAPTER)), 10);
+const TOTAL = parseInt(argOf('--levels', String(PLANNED)), 10);
 const OUT = path.resolve(__dirname, '..', argOf('--out', 'assets/levels/levels.json'));
 
 const levels = [];
@@ -316,7 +330,7 @@ let id = 0;
 
 for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
   const spec = CHAPTERS[ci];
-  const count = Math.min(PER_CHAPTER, TOTAL - id);
+  const count = Math.min(spec.count || PER_CHAPTER, TOTAL - id);
   const rand = rng((0x9e3779b9 ^ Math.imul(ci + 1, 2654435761)) >>> 0);
   const candidates = [];
 
@@ -327,9 +341,21 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     // Scramble depth ramps across the chapter, so difficulty rises inside a
     // chapter as well as between chapters.
     const balls = colors * spec.k;
-    const minDepth = Math.round(balls * 0.55);
-    const maxDepth = Math.round(balls * 2.4);
+    const minDepth = Math.round(balls * 0.75);
+    const maxDepth = Math.round(balls * 2.9);
     const target = Math.round(minDepth + (maxDepth - minDepth) * t);
+
+    // A floor on the solution length, walked up across the chapter.
+    //
+    // Scramble depth is a poor proxy for difficulty on its own: a deep
+    // scramble can wander back to a nearly-sorted board, and those were
+    // getting through and reading as filler. Par is the honest measure, so it
+    // is now an acceptance criterion rather than only a label. The first few
+    // levels of chapter 1 are exempt — they genuinely should be solvable in
+    // three or four pours.
+    const parFloor = ci === 0 && n < 4
+        ? 0
+        : Math.round(colors * (1.15 + 0.85 * t));
 
     let accepted = null;
     for (let attempt = 0; attempt < 800 && !accepted; attempt++) {
@@ -343,6 +369,7 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       // reaches a player.
       const solved = solve(cand, spec.k, colors);
       if (!solved) { rejected++; continue; }
+      if (solved.par < parFloor) { rejected++; continue; }
       accepted = { board: cand, colors, par: solved.par, exact: solved.exact };
     }
     if (!accepted) {

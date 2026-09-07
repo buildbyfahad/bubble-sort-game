@@ -63,7 +63,11 @@ class AudioService {
 
   /// Music sits well under the cues. It is scenery; the moment a player can
   /// hum it, it is competing with the puzzle.
-  static const double _musicVolume = 0.20;
+  ///
+  /// Raised from 0.20 after play-testing: at that level it was inaudible over
+  /// a phone speaker in a normally noisy room, which is the same as not
+  /// shipping it. It still sits a long way under every board cue.
+  static const double _musicVolume = 0.34;
 
   final Map<String, _Voices> _voices = <String, _Voices>{};
   AudioPlayer? _music;

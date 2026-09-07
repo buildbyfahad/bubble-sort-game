@@ -26,8 +26,24 @@ class HapticService {
   }
 
   /// A vessel sealing — the game's core reward beat.
+  ///
+  /// Three impacts rather than one, spaced to match the fracture: the strike,
+  /// then two lighter taps as the cracks run and the shards land. A single
+  /// mediumImpact is over before the animation has started and reads as a
+  /// button press; the burst is felt as the glass giving way.
+  ///
+  /// This is the only place in the game that fires more than one impact, and
+  /// that is the point — it is the moment the whole loop is built around, and
+  /// it should be the one thing the hand can identify without looking.
   void seal() {
-    if (_on) HapticFeedback.mediumImpact();
+    if (!_on) return;
+    HapticFeedback.heavyImpact();
+    Future<void>.delayed(const Duration(milliseconds: 90), () {
+      if (_on) HapticFeedback.lightImpact();
+    });
+    Future<void>.delayed(const Duration(milliseconds: 190), () {
+      if (_on) HapticFeedback.lightImpact();
+    });
   }
 
   /// A rejected pour. Soft on purpose: informative, not punishing.
@@ -35,8 +51,13 @@ class HapticService {
     if (_on) HapticFeedback.lightImpact();
   }
 
-  /// Level cleared.
+  /// Level cleared. A rising pair, so finishing a board is distinguishable by
+  /// touch from finishing a single vessel.
   void celebrate() {
-    if (_on) HapticFeedback.heavyImpact();
+    if (!_on) return;
+    HapticFeedback.mediumImpact();
+    Future<void>.delayed(const Duration(milliseconds: 110), () {
+      if (_on) HapticFeedback.heavyImpact();
+    });
   }
 }

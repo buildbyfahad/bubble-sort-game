@@ -90,7 +90,9 @@ void main() {
     useHandset(tester);
     await boot(tester);
 
-    await tester.tap(find.text('The road'));
+    // The progress card is the way to the map now; the separate labelled
+    // button was a second route to the same place.
+    await tester.tap(find.text('VIEW THE ROAD'));
     await settle(tester, steps: 20);
     expect(tester.takeException(), isNull);
     expect(find.byType(LevelsScreen), findsOneWidget);

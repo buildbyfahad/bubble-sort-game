@@ -29,7 +29,27 @@ class BoardLayout {
     // ball read as belonging to the row above it.
     const double rowGapRatio = 0.26;
 
-    const double maxBall = 54.0;
+    // Ball size cap.
+    //
+    // Was 54, which on a four- or five-vessel board produced vessels so large
+    // they read as a different game from the ten-vessel boards later on. The
+    // board should look like one object at every size; a cap this high made
+    // early levels look like a children's version of the same app.
+    const double maxBall = 46.0;
+
+    // Below this a ball stops being comfortably tappable and the colour is
+    // hard to read at arm's length, so wrapping to another row is the better
+    // trade even on a small board.
+    const double minBall = 26.0;
+
+    // Boards up to this size are always laid out in a single row.
+    //
+    // The row solver below optimises for ball size, and on five vessels that
+    // means two rows of three-and-two — which is a few per cent larger and
+    // looks broken, because a lone pair beneath a row of three reads as a
+    // mistake rather than as a layout. Under about six vessels the eye wants
+    // one line and will accept smaller balls to get it.
+    const int singleRowMax = 6;
 
     double ballFor(int r) {
       final int cols = (tubeCount / r).ceil();
@@ -67,10 +87,27 @@ class BoardLayout {
       }
     }
 
+    // Small boards override the solver entirely, provided one row still leaves
+    // the balls big enough to touch.
+    if (tubeCount <= singleRowMax && ballFor(1) >= minBall) chosenRows = 1;
+
     rows = chosenRows;
 
     perRow = (tubeCount / rows).ceil();
     ball = ballFor(rows);
+
+    // How many vessels sit on each row, distributed as evenly as possible.
+    //
+    // Filling rows to `ceil(n/rows)` and letting the last row take what is
+    // left puts thirteen vessels on rows of 5, 5 and 3 — a short final row
+    // reads as something that ran out rather than as a composition. Spreading
+    // the remainder gives 5, 4, 4.
+    rowCounts = <int>[];
+    final int base = tubeCount ~/ rows;
+    final int extra = tubeCount % rows;
+    for (int r = 0; r < rows; r++) {
+      rowCounts.add(base + (r < extra ? 1 : 0));
+    }
 
     metrics = TubeMetrics(ball, capacity);
     gap = ball * gapRatio;
@@ -91,14 +128,20 @@ class BoardLayout {
         math.max(0, (available.height - totalH) / 2 - metrics.liftZone / 2);
 
     origins = <Offset>[];
-    for (int i = 0; i < tubeCount; i++) {
-      final int row = i ~/ perRow;
-      final int col = i % perRow;
-      final int inRow = math.min(perRow, tubeCount - row * perRow);
+    int index = 0;
+    for (int row = 0; row < rows; row++) {
+      final int inRow = rowCounts[row];
       final double rowW = inRow * metrics.width + (inRow - 1) * gap;
-      final double left = (available.width - rowW) / 2 + col * (metrics.width + gap);
-      origins.add(Offset(left, top + row * (metrics.totalHeight + rowGap)));
+      final double rowLeft = (available.width - rowW) / 2;
+      for (int col = 0; col < inRow; col++) {
+        origins.add(Offset(
+          rowLeft + col * (metrics.width + gap),
+          top + row * (metrics.totalHeight + rowGap),
+        ));
+        index++;
+      }
     }
+    assert(index == tubeCount, 'every vessel must be placed exactly once');
   }
 
   final int tubeCount;
@@ -107,6 +150,9 @@ class BoardLayout {
 
   late final int rows;
   late final int perRow;
+
+  /// Vessels on each row, most-populated first. See the constructor.
+  late final List<int> rowCounts;
   late final double ball;
   late final double gap;
   late final double rowGap;

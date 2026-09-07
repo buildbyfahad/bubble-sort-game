@@ -24,27 +24,60 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 class AdsService extends ChangeNotifier {
   // ---------------------------------------------------------------- ad units
   //
-  // These are Google's public test units. They serve a real ad every time and
-  // are safe to build and run against, but they earn nothing.
+  // Two sets, and one switch between them.
   //
-  // >>> BEFORE RELEASE <<<
-  // Replace both with the rewarded unit ids from your own AdMob account, and
-  // set the matching application ids in:
-  //   android/app/src/main/AndroidManifest.xml   (com.google.android.gms.ads.APPLICATION_ID)
-  //   ios/Runner/Info.plist                      (GADApplicationIdentifier)
-  // The app crashes on launch if those application ids are missing or wrong.
+  // The test set below is Google's public demo publisher account. Every
+  // developer uses that same id. It serves a real video so the flow can be
+  // verified end to end, and it earns nothing — by design, and this is the
+  // important part: testing against your *own* live units generates
+  // impressions and clicks on your own ads, which AdMob classifies as invalid
+  // traffic and permanently bans accounts for. Never point this at a live unit
+  // on a device you tap ads on. Use [testDeviceIds] instead.
   static const String _testRewardedAndroid = 'ca-app-pub-3940256099942544/5224354917';
   static const String _testRewardedIOS = 'ca-app-pub-3940256099942544/1712485313';
 
-  /// Flipped to false once real unit ids are in place. Kept as an explicit
-  /// switch rather than a `kDebugMode` check so that shipping test ads is a
-  /// visible decision in a diff rather than an accident of build mode.
+  // >>> TO EARN REVENUE <<<
+  //
+  //  1. Create the app and a *rewarded* ad unit in your AdMob account.
+  //  2. Paste the two unit ids here (format: ca-app-pub-<16 digits>/<10 digits>).
+  //  3. Set [usingTestUnits] to false.
+  //  4. Put your AdMob *application* ids — a different format, with a "~" —
+  //     into android/app/src/main/AndroidManifest.xml and ios/Runner/Info.plist.
+  //     The SDK reads those at process start, so a wrong value there is a
+  //     crash on launch rather than a missing ad.
+  //  5. Add your own phone to [testDeviceIds] so you can still exercise the
+  //     shop without risking the account.
+  static const String _liveRewardedAndroid = '';
+  static const String _liveRewardedIOS = '';
+
+  /// The switch. Kept as an explicit constant rather than a `kDebugMode` check
+  /// so that shipping test ads is a visible line in a diff rather than an
+  /// accident of build mode — a release built in the wrong mode would
+  /// otherwise ship earning nothing and look completely normal.
   static const bool usingTestUnits = true;
 
-  static String get _rewardedUnitId => switch (defaultTargetPlatform) {
-        TargetPlatform.iOS => _testRewardedIOS,
-        _ => _testRewardedAndroid,
-      };
+  /// Devices that should always be served test ads, even in a live build.
+  ///
+  /// Get the id from the console on first run: the SDK logs
+  /// "Use RequestConfiguration.Builder.setTestDeviceIds(["ABC123..."])".
+  /// This is how you demo your own shipped game without generating invalid
+  /// traffic against your own units.
+  static const List<String> testDeviceIds = <String>[];
+
+  static String get _rewardedUnitId {
+    final bool iOS = defaultTargetPlatform == TargetPlatform.iOS;
+    if (usingTestUnits) return iOS ? _testRewardedIOS : _testRewardedAndroid;
+
+    final String live = iOS ? _liveRewardedIOS : _liveRewardedAndroid;
+    assert(
+      live.isNotEmpty,
+      'usingTestUnits is false but no live rewarded unit id is set for '
+      '$defaultTargetPlatform. Fill in _liveRewardedAndroid / _liveRewardedIOS.',
+    );
+    // Falling back rather than crashing a release build over a missed constant:
+    // a player would rather see an ad that earns nothing than a broken shop.
+    return live.isEmpty ? (iOS ? _testRewardedIOS : _testRewardedAndroid) : live;
+  }
 
   RewardedAd? _ad;
   bool _loading = false;
@@ -68,7 +101,19 @@ class AdsService extends ChangeNotifier {
   Future<void> init() async {
     if (_initialised) return;
     try {
+      if (testDeviceIds.isNotEmpty) {
+        await MobileAds.instance.updateRequestConfiguration(
+          RequestConfiguration(testDeviceIds: testDeviceIds),
+        );
+      }
       await MobileAds.instance.initialize().timeout(const Duration(seconds: 10));
+
+      if (usingTestUnits) {
+        debugPrint(
+          'Bubble Sort: serving TEST ads — these earn nothing. '
+          'See AdsService.usingTestUnits.',
+        );
+      }
       _initialised = true;
       notifyListeners();
       unawaited(_load());

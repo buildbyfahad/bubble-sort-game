@@ -471,6 +471,111 @@ class _Rule extends StatelessWidget {
 
 // -------------------------------------------------------------------- road
 
+/// Scenery.
+///
+/// The road used to run down an empty black field, which made a thousand
+/// levels feel like a spreadsheet with a line drawn on it. This fills the
+/// margins either side with vessels, drifting motes and faint contour rings —
+/// the game's own vocabulary rather than trees and clouds borrowed from
+/// somewhere else.
+///
+/// Every piece is a pure function of the row index, so it is deterministic
+/// (the same level always has the same scenery, and scrolling back does not
+/// reshuffle it), costs no state, and needs no layout pass. It is drawn behind
+/// the track and never inside the corridor the nodes occupy.
+class _SceneryPainter extends CustomPainter {
+  _SceneryPainter({required this.index, required this.walked});
+
+  /// The level's own id — the seed for everything here.
+  final int index;
+
+  /// Behind the player, the scenery picks up the road's warmth.
+  final bool walked;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final math.Random r = math.Random(index * 2654435761 & 0x7FFFFFFF);
+
+    final Color tint = walked
+        ? DS.goldDeep.withValues(alpha: 0.11)
+        : const Color(0xFFFFFFFF).withValues(alpha: 0.05);
+
+    // --- a contour ring, occasionally -------------------------------------
+    if (r.nextInt(3) == 0) {
+      final bool left = r.nextBool();
+      final Offset c = Offset(left ? w * 0.12 : w * 0.88, h * r.nextDouble());
+      final double rad = w * (0.10 + r.nextDouble() * 0.14);
+      for (int k = 0; k < 2; k++) {
+        canvas.drawCircle(
+          c,
+          rad + k * w * 0.05,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1
+            ..color = tint.withValues(alpha: tint.a * (0.7 - k * 0.3)),
+        );
+      }
+    }
+
+    // --- a small vessel in the margin --------------------------------------
+    if (r.nextInt(4) == 0) {
+      final bool left = r.nextBool();
+      final double vw = w * (0.045 + r.nextDouble() * 0.02);
+      final double vh = vw * 2.6;
+      final Rect body = Rect.fromLTWH(
+        left ? w * 0.06 : w * 0.90,
+        h * 0.2 + r.nextDouble() * h * 0.4,
+        vw,
+        vh,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          body,
+          topLeft: Radius.circular(vw * 0.22),
+          topRight: Radius.circular(vw * 0.22),
+          bottomLeft: Radius.circular(vw * 0.46),
+          bottomRight: Radius.circular(vw * 0.46),
+        ),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.1
+          ..color = tint,
+      );
+      // A hint of contents, so it reads as one of the game's vessels rather
+      // than as a rounded rectangle.
+      if (walked) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(body.left, body.bottom - vh * 0.34, vw, vh * 0.34),
+            Radius.circular(vw * 0.4),
+          ),
+          Paint()..color = DS.hues[index % DS.hues.length].base.withValues(alpha: 0.16),
+        );
+      }
+    }
+
+    // --- motes -------------------------------------------------------------
+    final int motes = 2 + r.nextInt(3);
+    for (int i = 0; i < motes; i++) {
+      // Kept out of the middle third, where the nodes and the track live.
+      final double x = r.nextBool()
+          ? w * (0.03 + r.nextDouble() * 0.16)
+          : w * (0.81 + r.nextDouble() * 0.16);
+      canvas.drawCircle(
+        Offset(x, h * r.nextDouble()),
+        1.0 + r.nextDouble() * 1.6,
+        Paint()..color = tint.withValues(alpha: tint.a * (0.6 + r.nextDouble() * 0.8)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SceneryPainter old) =>
+      old.index != index || old.walked != walked;
+}
+
 /// One level's slice of the map: the track running through it, and its node.
 ///
 /// Each row paints only its own half-segments — from the midpoint above it to
@@ -505,7 +610,8 @@ class _PathRow extends StatelessWidget {
               child: IgnorePointer(
                 child: RepaintBoundary(
                   child: CustomPaint(
-                    painter: _TrackPainter(row: row, walked: walked),
+                    painter: _SceneryPainter(index: row.id, walked: walked),
+                    foregroundPainter: _TrackPainter(row: row, walked: walked),
                   ),
                 ),
               ),

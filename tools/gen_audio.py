@@ -396,47 +396,88 @@ print('completion')
 
 # ------------------------------------------------------------------- crack
 #
-# The glass fracturing as a vessel seals. Four short bursts through a high
-# resonant band, spaced unevenly — evenly spaced crackles read as a machine.
-# Not written out on its own: it is a layer of every complete_N below, so that
-# the fracture the player *sees* and the fracture they *hear* are one event.
+# The glass fracturing as a vessel seals. Not written out on its own: it is a
+# layer of every complete_N below, so the fracture the player *sees* and the
+# fracture they *hear* are one event.
 def crackle(seed, bright=1.0):
+    """Dense fracture noise — the sound of the break itself."""
     layers = []
     r = Rng(seed)
-    for k, at in enumerate((0.0, 0.021, 0.047, 0.068)):
-        d = 0.018 + r.next() * 0.014
-        lo = 1600 + r.next() * 1200
-        hi = (6500 + r.next() * 3500) * bright
+    for k, at in enumerate((0.0, 0.013, 0.029, 0.044, 0.062, 0.085)):
+        d = 0.016 + r.next() * 0.020
+        lo = 1400 + r.next() * 1400
+        hi = (7000 + r.next() * 4000) * bright
         b = env_apply(bandpass(noise(d, seed=seed + k * 13), lo, hi),
-                      env_ad(int(d * SR), 0.0003, 30))
-        layers.append(delay(gain(b, 0.9 - k * 0.16), at))
+                      env_ad(int(d * SR), 0.0002, 26))
+        layers.append(delay(gain(b, 0.95 - k * 0.11), at))
+    return mix(*layers)
+
+
+def tinkle(seed, count=16, spread=0.45, bright=1.0):
+    """Shards landing.
+
+    Many very short, very high pings scattered unevenly across half a second.
+    This is the layer that makes a break read as *glass* rather than as a
+    generic crunch — the ear identifies glass by the tail of small bright
+    collisions after the impact, not by the impact itself. It is also what the
+    first version of this cue was missing, and why it sounded like a click.
+    """
+    r = Rng(seed)
+    layers = []
+    for i in range(count):
+        # Clustered toward the start: shards fall fastest right after the break.
+        at = (r.next() ** 1.7) * spread
+        f = (2200 + r.next() * 5200) * bright
+        d = 0.030 + r.next() * 0.070
+        ping = fm_bell(f, d, ratio=3.7 + r.next() * 2.0, index=1.4,
+                       index_decay=60, amp_decay=16, attack=0.0004)
+        layers.append(delay(gain(ping, 0.16 + r.next() * 0.30), at))
     return mix(*layers)
 
 
 # --------------------------------------------------------- vessel complete
 #
 # One per vessel sealed, walking up the scale, so clearing a board plays as a
-# rising phrase rather than the same reward eight times. Each is three things
-# at once: the glass cracking, the vessel ringing, and a sparkle above it —
-# and the sparkle gets brighter as the run gets longer, so the eighth seal is
-# audibly a bigger deal than the first.
+# rising phrase rather than the same reward eight times.
+#
+# Six layers, because this is the moment the entire game loop is built around
+# and it has to be unmistakable with the phone in a pocket:
+#
+#   thump    a low body hit — the weight of the strike
+#   crack    the fracture itself
+#   tinkle   shards falling, the layer that says "glass"
+#   bell     the reward tone, on the scale, rising with the run
+#   fifth    a harmony above it so the tone has width
+#   shimmer  a plucked tail that keeps ringing after the break has settled
+#
+# The sparkle also gets brighter and the tinkle denser as the run gets longer,
+# so the eighth seal is audibly a bigger deal than the first.
 for i, f in enumerate(PENTA[:8], start=1):
     lift_amt = (i - 1) / 7.0
-    body = fm_bell(f, 0.62, ratio=2.0, index=3.0 + lift_amt * 1.6,
-                   index_decay=9.0, amp_decay=3.6, attack=0.0025)
-    fifth = delay(gain(fm_bell(f * 1.5, 0.48, ratio=3.0, index=1.8,
-                               index_decay=14, amp_decay=5.0, attack=0.003),
-                       0.42 + lift_amt * 0.2), 0.045)
+
+    thump = gain(fm_bell(f / 4, 0.26, ratio=1.0, index=1.1, index_decay=30,
+                         amp_decay=9.0, attack=0.0015), 0.70)
+    glass = gain(crackle(200 + i * 7, bright=1.0 + lift_amt * 0.4), 0.85)
+    shards = gain(tinkle(400 + i * 11,
+                         count=14 + int(lift_amt * 10),
+                         spread=0.42 + lift_amt * 0.18,
+                         bright=1.0 + lift_amt * 0.25),
+                  0.55 + lift_amt * 0.25)
+    body = delay(fm_bell(f, 0.70, ratio=2.0, index=3.2 + lift_amt * 1.8,
+                         index_decay=8.0, amp_decay=3.2, attack=0.002), 0.026)
+    fifth = delay(gain(fm_bell(f * 1.5, 0.52, ratio=3.0, index=1.9,
+                               index_decay=13, amp_decay=4.6, attack=0.003),
+                       0.44 + lift_amt * 0.2), 0.062)
     shimmer = delay(gain(mix(
-        pluck(f * 4, 0.34, seed=31 + i),
-        delay(pluck(f * 6, 0.28, seed=57 + i), 0.035),
-    ), 0.16 + lift_amt * 0.20), 0.06)
-    glass = gain(crackle(200 + i * 7, bright=1.0 + lift_amt * 0.4), 0.55)
-    sub = gain(fm_bell(f / 2, 0.34, ratio=1.0, index=0.6, index_decay=20,
-                       amp_decay=6.0, attack=0.004), 0.35)
+        pluck(f * 4, 0.40, seed=31 + i),
+        delay(pluck(f * 6, 0.32, seed=57 + i), 0.035),
+    ), 0.20 + lift_amt * 0.22), 0.08)
+
     write('complete_{}.wav'.format(i),
-          reverb(mix(glass, body, fifth, shimmer, sub), wet=0.34, tail=1.0),
-          peak=0.52 + lift_amt * 0.08)
+          reverb(mix(thump, glass, shards, body, fifth, shimmer),
+                 wet=0.32, tail=1.1),
+          peak=0.60 + lift_amt * 0.08,
+          drive=1.5)
 
 # ---------------------------------------------------------------- level win
 #
@@ -459,7 +500,8 @@ win = mix(
     delay(gain(mix(pluck(PENTA[8], 0.7, seed=77),
                    delay(pluck(PENTA[9], 0.6, seed=88), 0.06),
                    delay(pluck(PENTA[7] * 2, 0.5, seed=99), 0.13)), 0.26), 0.46),
-    gain(crackle(303, bright=1.3), 0.22),
+    gain(crackle(303, bright=1.3), 0.30),
+    gain(tinkle(505, count=26, spread=0.8, bright=1.3), 0.34),
 )
 write('win.wav', reverb(win, wet=0.38, tail=1.4), peak=0.66)
 

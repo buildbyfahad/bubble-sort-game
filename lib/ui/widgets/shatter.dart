@@ -77,13 +77,13 @@ class Fracture {
     final Offset impact = Offset(0.34 + r.nextDouble() * 0.32, 0.10 + r.nextDouble() * 0.08);
 
     // --- primaries: long runs from the impact toward the base --------------
-    final int primaries = 4 + r.nextInt(2);
+    final int primaries = 6 + r.nextInt(3);
     for (int i = 0; i < primaries; i++) {
       // Fan biased downward — glass under a rim strike fractures with the
       // blow, not back up out of it.
       final double angle =
           math.pi * (0.16 + 0.68 * (i + r.nextDouble() * 0.6) / primaries);
-      final double reach = 0.62 + r.nextDouble() * 0.46;
+      final double reach = 0.34 + r.nextDouble() * 0.38;
 
       final List<Offset> pts = <Offset>[impact];
       Offset p = impact;
@@ -93,7 +93,7 @@ class Fracture {
       // it needs enough joints to visibly hunt for the weakest path.
       final int segs = 5 + r.nextInt(3);
       for (int s = 0; s < segs; s++) {
-        a += (r.nextDouble() - 0.5) * 0.85;
+        a += (r.nextDouble() - 0.5) * 1.15;
         final double step = reach / segs;
         p = Offset(p.dx + math.cos(a) * step * 0.62, p.dy + math.sin(a) * step);
         pts.add(p);
@@ -160,7 +160,7 @@ class Fracture {
 
     // --- shards ------------------------------------------------------------
     final List<_Shard> shards = <_Shard>[];
-    final int count = 9 + r.nextInt(4);
+    final int count = 17 + r.nextInt(6);
     for (int i = 0; i < count; i++) {
       // Thrown from around the mouth, since that is where the vessel is open.
       final double x = 0.10 + r.nextDouble() * 0.80;
@@ -169,9 +169,9 @@ class Fracture {
       final double lateral = (x - 0.5) * (2.4 + r.nextDouble() * 2.2);
       shards.add(_Shard(
         Offset(x, y),
-        Offset(lateral * 0.30, -(0.55 + r.nextDouble() * 0.85)),
-        (r.nextDouble() - 0.5) * 14,
-        0.070 + r.nextDouble() * 0.075,
+        Offset(lateral * 0.34, -(0.75 + r.nextDouble() * 1.15)),
+        (r.nextDouble() - 0.5) * 18,
+        0.055 + r.nextDouble() * 0.105,
         r.nextDouble() * 0.10,
       ));
     }
@@ -225,14 +225,14 @@ class ShatterPainter extends CustomPainter {
     //
     // Two frames of light. Long enough to register as the moment of contact,
     // short enough that it is never seen as a fade.
-    final double flash = (1 - (t / 0.16)).clamp(0.0, 1.0);
+    final double flash = (1 - (t / 0.13)).clamp(0.0, 1.0);
     if (flash > 0) {
       final double f = flash * flash;
       canvas.drawRRect(
         body,
         Paint()
           ..color = Color.lerp(hue.light, const Color(0xFFFFFFFF), 0.45)!
-              .withValues(alpha: 0.55 * f)
+              .withValues(alpha: 0.78 * f)
           ..blendMode = BlendMode.plus,
       );
     }
@@ -290,26 +290,29 @@ class ShatterPainter extends CustomPainter {
       final Path? path = _grow(b.points, size, grown);
       if (path == null) continue;
 
-      // Dark core first, bright edge over it. A crack is a gap with light on
-      // its lips; a single bright line is just a scratch.
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = b.width * w * 0.052
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..color = DS.inkDeep.withValues(alpha: 0.55 * intensity),
+      // Tapered, drawn segment by segment: wide at the impact and closing to
+      // nothing at the tip.
+      //
+      // A constant-width stroke is the single thing that made the first
+      // version of this read as white scribble rather than as broken glass.
+      // A real fracture is widest where it was struck and vanishes where it
+      // ran out of energy, and the eye knows that even when it cannot say why.
+      _taperedStroke(
+        canvas,
+        b.points,
+        size,
+        grown,
+        width: b.width * w * 0.075,
+        color: DS.inkDeep.withValues(alpha: 0.60 * intensity),
       );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = b.width * w * 0.026
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..color = Color.lerp(hue.light, const Color(0xFFFFFFFF), 0.5)!
-              .withValues(alpha: 0.85 * intensity),
+      _taperedStroke(
+        canvas,
+        b.points,
+        size,
+        grown,
+        width: b.width * w * 0.030,
+        color: Color.lerp(hue.light, const Color(0xFFFFFFFF), 0.22)!
+            .withValues(alpha: 0.92 * intensity),
       );
 
       // A bloom at the growing tip while it is still travelling.
@@ -381,8 +384,9 @@ class ShatterPainter extends CustomPainter {
             Offset(0, -side),
             Offset(0, side),
             <Color>[
-              const Color(0xFFFFFFFF).withValues(alpha: 0.85 * fade),
-              hue.base.withValues(alpha: 0.55 * fade),
+              Color.lerp(const Color(0xFFFFFFFF), hue.light, 0.35)!
+                  .withValues(alpha: 0.95 * fade),
+              hue.base.withValues(alpha: 0.8 * fade),
             ],
           ),
       );
@@ -391,10 +395,66 @@ class ShatterPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 0.8
-          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.6 * fade),
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.85 * fade),
       );
       canvas.restore();
     }
+  }
+
+  /// Strokes the first [grown] fraction of a polyline with a width that falls
+  /// to zero along its length.
+  ///
+  /// Flutter has no variable-width stroke, so this walks the line and draws
+  /// each short segment with its own paint. At these lengths that is a handful
+  /// of draw calls and cheaper than building a polygon per crack.
+  static void _taperedStroke(
+    Canvas canvas,
+    List<Offset> pts,
+    Size size,
+    double grown, {
+    required double width,
+    required Color color,
+  }) {
+    if (pts.length < 2 || grown <= 0) return;
+    final List<Offset> px = <Offset>[
+      for (final Offset p in pts) Offset(p.dx * size.width, p.dy * size.height),
+    ];
+    final double total = _length(px);
+    if (total <= 0) return;
+
+    const int steps = 14;
+    final double end = total * grown;
+    final Paint paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+
+    for (int i = 0; i < steps; i++) {
+      final double a = end * (i / steps);
+      final double b = end * ((i + 1) / steps);
+      // Taper against position along the *whole* crack, not the grown part,
+      // so the profile does not rescale as the fracture travels.
+      final double at = (b / total).clamp(0.0, 1.0);
+      paint.strokeWidth = width * (1 - at * 0.88);
+      canvas.drawLine(
+        _walk(px, a),
+        _walk(px, b),
+        paint,
+      );
+    }
+  }
+
+  /// The point [d] pixels along a polyline.
+  static Offset _walk(List<Offset> px, double d) {
+    double want = d;
+    for (int i = 1; i < px.length; i++) {
+      final double seg = (px[i] - px[i - 1]).distance;
+      if (want <= seg) {
+        return Offset.lerp(px[i - 1], px[i], seg == 0 ? 0 : want / seg)!;
+      }
+      want -= seg;
+    }
+    return px.last;
   }
 
   // ------------------------------------------------------------- polyline maths
