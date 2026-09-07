@@ -250,6 +250,39 @@ void main() {
     await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/levels.png'));
   });
 
+  // The three grades differ by more than a word and a colour — rays, milled
+  // edge and how full the vessel reads all change. These lock that down, since
+  // it is the only progression signal on the screen a player sees most.
+  for (final (String name, int moves) grade in <(String, int)>[
+    ('great', 24),
+    ('solved', 34),
+  ]) {
+    renderTest('level complete — ${grade.$1}', (WidgetTester tester) async {
+      useHandset(tester);
+      await tester.pumpWidget(harness(await buildScope(
+        child: LevelCompleteSheet(
+          level: loadCatalog().byId(120),
+          moves: grade.$2,
+          best: grade.$2,
+          improved: false,
+          hintsAwarded: 0,
+          coinsAwarded: 30,
+          overallBefore: 0.11,
+          overallAfter: 0.12,
+          hasNext: true,
+          onNext: () {},
+          onReplay: () {},
+          onHome: () {},
+        ),
+      )));
+      await settle(tester, steps: 40, ms: 60);
+      await expectLater(
+        find.byType(Navigator),
+        matchesGoldenFile('goldens/level_complete_${grade.$1}.png'),
+      );
+    });
+  }
+
   renderTest('daily reward — unclaimed, mid-streak', (WidgetTester tester) async {
     useHandset(tester);
     await tester.pumpWidget(harness(await buildScope(

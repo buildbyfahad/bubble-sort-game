@@ -146,11 +146,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                  const Spacer(flex: 6),
+                  const Spacer(flex: 5),
+
+                  // Where the player actually is, in words, above the numbers.
+                  // The gap between the identity block and the action block
+                  // used to be empty ground; a player returning after a week
+                  // had to read a percentage to remember where they had got
+                  // to, and a chapter name is the thing they remember.
+                  RiseIn(
+                    index: 2,
+                    child: Center(
+                      child: Column(
+                        children: <Widget>[
+                          Text(
+                            'CHAPTER ${scope.catalog.chapterOf(nextId).number.toString().padLeft(2, '0')}',
+                            style: Type.label.copyWith(
+                              color: DS.gold.withValues(alpha: 0.55),
+                              letterSpacing: 2.2,
+                            ),
+                          ),
+                          const SizedBox(height: DS.s8),
+                          Text(
+                            scope.catalog.chapterOf(nextId).name,
+                            style: Type.titleMd.copyWith(fontSize: 23),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(flex: 3),
 
                   // --- state ------------------------------------------------
                   RiseIn(
-                    index: 2,
+                    index: 3,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       // The card *is* the map's summary, so it opens the map.
@@ -223,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: DS.s12),
 
                   RiseIn(
-                    index: 3,
+                    index: 4,
                     child: _DailyStrip(
                       claimable: scope.wallet.canClaimDaily,
                       streak: scope.wallet.canClaimDaily
@@ -237,11 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // --- the one obvious thing to press -----------------------
                   RiseIn(
-                    index: 4,
+                    index: 5,
                     child: PrimaryButton(
                       label: cleared == 0 ? 'Play' : (finishedAll ? 'Play again' : 'Continue'),
-                      sublabel: 'LEVEL $nextId · '
-                          '${scope.catalog.chapterOf(nextId).name.toUpperCase()}',
+                      sublabel: 'LEVEL $nextId',
                       onTap: () {
                         scope.audio.whoosh();
                         Navigator.of(context).push(

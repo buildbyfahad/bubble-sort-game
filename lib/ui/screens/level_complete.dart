@@ -23,6 +23,20 @@ ClearGrade gradeFor(int moves, int par) {
 }
 
 extension on ClearGrade {
+  /// 0, 1, 2. Drives how much the crest is allowed to celebrate: how many
+  /// rays it throws, how bright the burst is, how full the vessel reads.
+  int get rank => switch (this) {
+        ClearGrade.clear => 0,
+        ClearGrade.great => 1,
+        ClearGrade.flawless => 2,
+      };
+
+  String get note => switch (this) {
+        ClearGrade.flawless => 'AT PAR OR BETTER',
+        ClearGrade.great => 'CLOSE TO PAR',
+        ClearGrade.clear => 'BOARD CLEARED',
+      };
+
   String get label => switch (this) {
         ClearGrade.flawless => 'Flawless',
         ClearGrade.great => 'Great',
@@ -143,197 +157,159 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
   Widget build(BuildContext context) {
     final ClearGrade grade = gradeFor(widget.moves, widget.level.par);
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(DS.s16),
-          child: Stack(
-            alignment: Alignment.topCenter,
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              // Light and motes sit behind the card and are clipped by nothing,
-              // so the celebration reads as coming from the card rather than
-              // being drawn on top of it.
-              Positioned(
-                top: -300,
-                child: IgnorePointer(
-                  child: SizedBox(
-                    width: 420,
-                    height: 316,
-                    child: AnimatedBuilder(
-                      animation: _c,
-                      builder: (BuildContext context, _) =>
-                          CustomPaint(painter: _CelebrationPainter(_c.value, grade.color)),
-                    ),
+    // A column, not a bottom sheet.
+    //
+    // The card used to sit on the bottom edge with two thirds of the screen
+    // left black above it, which made the most-visited screen in the game read
+    // as a form that had appeared over the board. The crest now occupies that
+    // space and the result is a composition: mark, verdict, then the numbers.
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(DS.s16, DS.s16, DS.s16, DS.s16),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _c,
+                  builder: (BuildContext context, _) => _Crest(
+                    grade: grade,
+                    t: _c.value,
                   ),
                 ),
               ),
-              SoftCard(
-                radius: DS.rXl,
-                tint: grade.color,
-                padding: const EdgeInsets.fromLTRB(DS.s24, DS.s24, DS.s24, DS.s24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Center(
-                      child: Text(
-                        'LEVEL ${widget.level.id.toString().padLeft(2, '0')} CLEARED',
-                        style: Type.label.copyWith(color: DS.textTertiary),
-                      ),
-                    ),
-                    const SizedBox(height: DS.s12),
-                    Center(
-                      child: Text(
-                        grade.label,
-                        style: Type.titleLg.copyWith(color: grade.color),
-                      ),
-                    ),
-                    const SizedBox(height: DS.s24),
-
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: _Stat(
-                            label: 'MOVES',
-                            value: widget.moves,
-                            animation: _c,
-                            start: 0.22,
-                          ),
-                        ),
-                        _StatDivider(),
-                        Expanded(
-                          child: _Stat(
-                            label: 'PAR',
-                            value: widget.level.par,
-                            animation: _c,
-                            start: 0.30,
-                            muted: true,
-                          ),
-                        ),
-                        _StatDivider(),
-                        Expanded(
-                          child: _Stat(
-                            label: widget.improved ? 'NEW BEST' : 'BEST',
-                            value: widget.best,
-                            animation: _c,
-                            start: 0.38,
-                            highlight: widget.improved,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    if (widget.coinsAwarded > 0 || widget.hintsAwarded > 0) ...<Widget>[
-                      const SizedBox(height: DS.s20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          if (widget.coinsAwarded > 0)
-                            _Reward(
-                              icon: DIcons.coin,
-                              label: '+${widget.coinsAwarded}',
-                              accent: DS.gold,
-                              animation: _c,
-                              start: 0.46,
-                            ),
-                          if (widget.coinsAwarded > 0 && widget.hintsAwarded > 0)
-                            const SizedBox(width: DS.s8),
-                          if (widget.hintsAwarded > 0)
-                            _Reward(
-                              icon: DIcons.hint,
-                              label: '+${widget.hintsAwarded} '
-                                  'hint${widget.hintsAwarded == 1 ? '' : 's'}',
-                              accent: DS.aqua,
-                              animation: _c,
-                              start: 0.52,
-                            ),
-                        ],
-                      ),
-                    ],
-
-                    const SizedBox(height: DS.s24),
-                    Row(
-                      children: <Widget>[
-                        Text('PROGRESS', style: Type.label),
-                        const Spacer(),
-                        Text(
-                          '${(widget.overallAfter * 100).round()}%',
-                          style: Type.label.copyWith(color: DS.textSecondary),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: DS.s8),
-                    // Begins at the previous value so the player watches the
-                    // bar move, rather than arriving to find it already moved.
-                    _DelayedProgress(
-                      animation: _c,
-                      from: widget.overallBefore,
-                      to: widget.overallAfter,
-                      start: 0.42,
-                    ),
-
-                    const SizedBox(height: DS.s24),
-                    PrimaryButton(
-                      label: widget.hasNext ? 'Next level' : 'Back to menu',
-                      idlePulse: false,
-                      onTap: widget.hasNext ? widget.onNext : widget.onHome,
-                    ),
-                    const SizedBox(height: DS.s12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        TextAction(icon: DIcons.restart, label: 'Replay', onTap: widget.onReplay),
-                        const SizedBox(width: DS.s12),
-                        TextAction(icon: DIcons.grid, label: 'Menu', onTap: widget.onHome),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            _ResultCard(
+              grade: grade,
+              animation: _c,
+              level: widget.level,
+              moves: widget.moves,
+              best: widget.best,
+              improved: widget.improved,
+              hintsAwarded: widget.hintsAwarded,
+              coinsAwarded: widget.coinsAwarded,
+              overallBefore: widget.overallBefore,
+              overallAfter: widget.overallAfter,
+              hasNext: widget.hasNext,
+              onNext: widget.onNext,
+              onReplay: widget.onReplay,
+              onHome: widget.onHome,
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// A single expanding ring plus a dozen slow motes. Twelve, not two hundred:
-/// the eye reads a handful of drifting points as light and a swarm as noise.
-class _CelebrationPainter extends CustomPainter {
-  _CelebrationPainter(this.t, this.color);
+/// The verdict, struck as a seal.
+///
+/// Deliberately not a row of stars. Stars are the most over-used reward device
+/// in the category and they imply an incomplete result whenever the player
+/// does not get three — on a puzzle where every clear is a real clear, that is
+/// the wrong message forty levels in. This is one mark whose *weight* changes:
+/// the ring gains a milled edge, the burst gains rays, and the vessel at the
+/// centre fills, as the result improves.
+class _Crest extends StatelessWidget {
+  const _Crest({required this.grade, required this.t});
 
+  final ClearGrade grade;
   final double t;
-  final Color color;
 
-  static const int _moteCount = 12;
+  @override
+  Widget build(BuildContext context) {
+    // Arrives with a single overshoot, like something set down hard.
+    final double pop = Ease.overshoot.transform((t / 0.34).clamp(0.0, 1.0));
+    final double label = Ease.out.transform(((t - 0.26) / 0.34).clamp(0.0, 1.0));
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Transform.scale(
+          scale: 0.6 + pop * 0.4,
+          child: SizedBox(
+            width: 188,
+            height: 188,
+            child: CustomPaint(painter: _CrestPainter(grade: grade, t: t)),
+          ),
+        ),
+        const SizedBox(height: DS.s24),
+        Opacity(
+          opacity: label,
+          child: Transform.translate(
+            offset: Offset(0, (1 - label) * 12),
+            child: Column(
+              children: <Widget>[
+                Text(grade.label, style: Type.titleLg.copyWith(color: grade.color)),
+                const SizedBox(height: DS.s8),
+                Text(
+                  grade.note,
+                  style: Type.label.copyWith(
+                    color: grade.color.withValues(alpha: 0.55),
+                    letterSpacing: 2.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CrestPainter extends CustomPainter {
+  _CrestPainter({required this.grade, required this.t});
+
+  final ClearGrade grade;
+  final double t;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Seated on the card's top edge: the light appears to come from the
-    // card, and the motes rise into open space instead of behind it.
-    final Offset c = Offset(size.width / 2, size.height);
+    final Offset c = size.center(Offset.zero);
+    final double r = size.width * 0.30;
+    final Color accent = grade.color;
+    final int rank = grade.rank;
 
-    // A single soft bloom seated on the card's top edge. An expanding stroked
-    // ring was tried here and cut: against a dark ground it reads as a stray
-    // hairline arc floating in space rather than as light.
-    final double bloom = Curves.easeOutCubic.transform((t / 0.5).clamp(0.0, 1.0));
-    final double bloomFade = 1 - (t / 0.8).clamp(0.0, 1.0);
-    if (bloomFade > 0) {
-      final double r = size.width * (0.16 + bloom * 0.42);
+    // --- rays -------------------------------------------------------------
+    //
+    // Only on a result worth them. A "Solved" clear gets the seal and nothing
+    // else, so the difference between grades is felt before it is read.
+    if (rank > 0) {
+      final int rays = rank == 2 ? 16 : 10;
+      final double sweep = Ease.out.transform(((t - 0.10) / 0.45).clamp(0.0, 1.0));
+      final double fade = 1 - ((t - 0.55) / 0.45).clamp(0.0, 1.0);
+      for (int i = 0; i < rays; i++) {
+        final double a = (i / rays) * math.pi * 2 + t * 0.25;
+        final double inner = r * 1.22;
+        final double outer = inner + r * (0.30 + (i.isEven ? 0.34 : 0.14)) * sweep;
+        canvas.drawLine(
+          c + Offset(math.cos(a), math.sin(a)) * inner,
+          c + Offset(math.cos(a), math.sin(a)) * outer,
+          Paint()
+            ..strokeWidth = i.isEven ? 2.4 : 1.2
+            ..strokeCap = StrokeCap.round
+            ..color = accent.withValues(alpha: 0.30 * fade * sweep),
+        );
+      }
+    }
+
+    // --- the burst behind the seal ----------------------------------------
+    final double burst = Curves.easeOutCubic.transform((t / 0.5).clamp(0.0, 1.0));
+    final double burstFade = 1 - (t / 0.85).clamp(0.0, 1.0);
+    if (burstFade > 0) {
+      final double br = r * (1.0 + burst * 1.5);
       canvas.drawCircle(
         c,
-        r,
+        br,
         Paint()
           ..shader = ui.Gradient.radial(
             c,
-            r,
+            br,
             <Color>[
-              color.withValues(alpha: 0.22 * bloomFade),
-              color.withValues(alpha: 0.07 * bloomFade),
-              color.withValues(alpha: 0.0),
+              accent.withValues(alpha: (0.16 + rank * 0.06) * burstFade),
+              accent.withValues(alpha: 0.05 * burstFade),
+              accent.withValues(alpha: 0),
             ],
             <double>[0.0, 0.45, 1.0],
           )
@@ -341,26 +317,268 @@ class _CelebrationPainter extends CustomPainter {
       );
     }
 
-    // Motes: each on its own phase, rising and fading. Deterministic offsets,
-    // so the moment looks identical every time it plays.
-    for (int i = 0; i < _moteCount; i++) {
-      final double seed = i / _moteCount;
-      // Every mote must complete its rise before the controller stops, or the
-      // last few freeze mid-air as permanent dots.
-      final double phase = ((t - 0.05 - seed * 0.24) / 0.60).clamp(0.0, 1.0);
-      if (phase <= 0 || phase >= 1) continue;
-      final double angle = seed * math.pi * 2 + 0.7;
-      final double spread = size.width * (0.10 + 0.24 * ((i * 37) % 11) / 11);
-      final double x = c.dx + math.cos(angle) * spread * (0.4 + phase * 0.8);
-      final double y = c.dy - phase * size.height * (0.52 + 0.34 * ((i * 53) % 7) / 7);
-      final double a = math.sin(phase * math.pi) * 0.8;
-      final double r = size.width * 0.009 * (1 + ((i * 29) % 5) / 3);
-      canvas.drawCircle(Offset(x, y), r, Paint()..color = color.withValues(alpha: a));
+    // --- the seal ---------------------------------------------------------
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(c.dx, c.dy - r),
+          Offset(c.dx, c.dy + r),
+          <Color>[
+            Color.lerp(DS.surfaceHigh, accent, 0.20)!,
+            DS.surface,
+          ],
+        ),
+    );
+
+    // A milled edge, the way a struck coin has. Only on the top two grades —
+    // it is the detail that makes the mark feel minted rather than drawn.
+    if (rank > 0) {
+      const int teeth = 48;
+      for (int i = 0; i < teeth; i++) {
+        final double a = (i / teeth) * math.pi * 2;
+        canvas.drawLine(
+          c + Offset(math.cos(a), math.sin(a)) * (r * 1.02),
+          c + Offset(math.cos(a), math.sin(a)) * (r * 1.08),
+          Paint()
+            ..strokeWidth = 1.4
+            ..color = accent.withValues(alpha: i.isEven ? 0.34 : 0.14),
+        );
+      }
     }
+
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0 + rank * 0.6
+        ..color = accent.withValues(alpha: 0.85),
+    );
+    canvas.drawCircle(
+      c,
+      r * 0.86,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = accent.withValues(alpha: 0.28),
+    );
+
+    // --- the vessel at the centre -----------------------------------------
+    //
+    // The game's own mark rather than a tick or a star, filled to the grade:
+    // brim-full for flawless, and lower as the result drops. The sealed vessel
+    // is what the player has just spent the level making.
+    // Proportioned from the ball, exactly as the board's own vessels are.
+    // Picking a width and a height independently gave a vessel too wide for
+    // the four balls in it, and they read as a column of dots rather than as
+    // contents.
+    final double ball = r * 0.255;
+    final double vw = ball * 1.46;
+    final double vh = ball * 4.16 + ball * 0.34;
+    final Rect body = Rect.fromCenter(center: c, width: vw, height: vh);
+    final RRect vessel = RRect.fromRectAndCorners(
+      body,
+      topLeft: Radius.circular(vw * 0.22),
+      topRight: Radius.circular(vw * 0.22),
+      bottomLeft: Radius.circular(vw * 0.46),
+      bottomRight: Radius.circular(vw * 0.46),
+    );
+
+    canvas.drawRRect(vessel, Paint()..color = DS.inkDeep.withValues(alpha: 0.55));
+
+    // Balls, not a flat fill.
+    //
+    // A gradient inside the silhouette reads as a pill or a zero at this size.
+    // Drawing the actual contents — three or four spheres, lit from above like
+    // every other ball in the game — makes the mark legible as *a vessel the
+    // player just sealed* in the fraction of a second it is looked at.
+    final int filled = <int>[2, 3, 4][rank];
+    final double poured = Ease.out.transform(((t - 0.18) / 0.42).clamp(0.0, 1.0));
+    final double pad = ball * 0.17;
+    final double pitch = ball * 1.04;
+
+    canvas.save();
+    canvas.clipRRect(vessel);
+    for (int i = 0; i < filled; i++) {
+      // Poured in from the bottom up, staggered, so the crest fills rather
+      // than appears.
+      final double at = ((poured - i * 0.13) / (1 - i * 0.13)).clamp(0.0, 1.0);
+      if (at <= 0) continue;
+      final Offset bc = Offset(c.dx, body.bottom - pad - pitch * i - ball * 0.5);
+      final double br = ball * 0.5 * at;
+      canvas.drawCircle(
+        bc,
+        br,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            Offset(bc.dx - br * 0.3, bc.dy - br * 0.38),
+            br * 1.25,
+            <Color>[
+              Color.lerp(accent, const Color(0xFFFFFFFF), 0.45)!,
+              accent,
+              Color.lerp(accent, DS.inkDeep, 0.55)!,
+            ],
+            <double>[0.0, 0.5, 1.0],
+          ),
+      );
+    }
+    canvas.restore();
+
+    canvas.drawRRect(
+      vessel,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..color = accent.withValues(alpha: 0.8),
+    );
   }
 
   @override
-  bool shouldRepaint(_CelebrationPainter old) => old.t != t;
+  bool shouldRepaint(_CrestPainter old) => old.t != t || old.grade != grade;
+}
+
+/// The numbers, and what to do next.
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({
+    required this.grade,
+    required this.animation,
+    required this.level,
+    required this.moves,
+    required this.best,
+    required this.improved,
+    required this.hintsAwarded,
+    required this.coinsAwarded,
+    required this.overallBefore,
+    required this.overallAfter,
+    required this.hasNext,
+    required this.onNext,
+    required this.onReplay,
+    required this.onHome,
+  });
+
+  final ClearGrade grade;
+  final Animation<double> animation;
+  final Level level;
+  final int moves;
+  final int best;
+  final bool improved;
+  final int hintsAwarded;
+  final int coinsAwarded;
+  final double overallBefore;
+  final double overallAfter;
+  final bool hasNext;
+  final VoidCallback onNext;
+  final VoidCallback onReplay;
+  final VoidCallback onHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      radius: DS.rXl,
+      tint: grade.color,
+      padding: const EdgeInsets.fromLTRB(DS.s24, DS.s20, DS.s24, DS.s24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Center(
+            child: Text(
+              'LEVEL ${level.id} CLEARED',
+              style: Type.label.copyWith(color: DS.textTertiary),
+            ),
+          ),
+          const SizedBox(height: DS.s16),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _Stat(label: 'MOVES', value: moves, animation: animation, start: 0.22),
+              ),
+              _StatDivider(),
+              Expanded(
+                child: _Stat(
+                  label: 'PAR',
+                  value: level.par,
+                  animation: animation,
+                  start: 0.30,
+                  muted: true,
+                ),
+              ),
+              _StatDivider(),
+              Expanded(
+                child: _Stat(
+                  label: improved ? 'NEW BEST' : 'BEST',
+                  value: best,
+                  animation: animation,
+                  start: 0.38,
+                  highlight: improved,
+                ),
+              ),
+            ],
+          ),
+          if (coinsAwarded > 0 || hintsAwarded > 0) ...<Widget>[
+            const SizedBox(height: DS.s16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                if (coinsAwarded > 0)
+                  _Reward(
+                    icon: DIcons.coin,
+                    label: '+$coinsAwarded',
+                    accent: DS.gold,
+                    animation: animation,
+                    start: 0.46,
+                  ),
+                if (coinsAwarded > 0 && hintsAwarded > 0) const SizedBox(width: DS.s8),
+                if (hintsAwarded > 0)
+                  _Reward(
+                    icon: DIcons.hint,
+                    label: '+$hintsAwarded hint${hintsAwarded == 1 ? '' : 's'}',
+                    accent: DS.aqua,
+                    animation: animation,
+                    start: 0.52,
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: DS.s20),
+          Row(
+            children: <Widget>[
+              Text('PROGRESS', style: Type.label),
+              const Spacer(),
+              Text(
+                '${(overallAfter * 100).toStringAsFixed(1)}%',
+                style: Type.label.copyWith(color: DS.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.s8),
+          _DelayedProgress(
+            animation: animation,
+            from: overallBefore,
+            to: overallAfter,
+            start: 0.42,
+          ),
+          const SizedBox(height: DS.s20),
+          PrimaryButton(
+            label: hasNext ? 'Next level' : 'Back to menu',
+            idlePulse: false,
+            onTap: hasNext ? onNext : onHome,
+          ),
+          const SizedBox(height: DS.s12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              TextAction(icon: DIcons.restart, label: 'Replay', onTap: onReplay),
+              const SizedBox(width: DS.s12),
+              TextAction(icon: DIcons.map, label: 'Menu', onTap: onHome),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Stat extends StatelessWidget {
