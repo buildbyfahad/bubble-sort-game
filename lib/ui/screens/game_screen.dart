@@ -4,6 +4,7 @@ import '../../data/level.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../engine/game_controller.dart';
+import '../../data/cosmetics.dart';
 import '../../services/wallet_service.dart';
 import '../app_scope.dart';
 import '../transitions.dart';
@@ -152,6 +153,17 @@ class _GameScreenState extends State<GameScreen> {
     await _scope.wallet.grantCoins(coins);
     if (firstClear) await _scope.wallet.grantHints(1);
 
+    // A finale can carry a cosmetic. Granted on the first clear only, and
+    // only if the player does not already own it.
+    Cosmetic? unlocked;
+    if (level.isBoss && firstClear) {
+      final Cosmetic? reward = Cosmetic.rewardFor(_chapter.number);
+      if (reward != null && !_scope.cosmetics.owns(reward.id)) {
+        await _scope.cosmetics.grant(reward.id);
+        unlocked = reward;
+      }
+    }
+
     final double after = _scope.progress.completion;
     if (!mounted) return;
 
@@ -166,6 +178,7 @@ class _GameScreenState extends State<GameScreen> {
           hintsAwarded: firstClear ? 1 : 0,
           coinsAwarded: coins,
           bestFlow: _controller.bestFlow,
+          unlocked: unlocked,
           overallBefore: before,
           overallAfter: after,
           hasNext: level.id < _scope.catalog.length,
@@ -247,6 +260,7 @@ class _GameScreenState extends State<GameScreen> {
     return AmbientBackground(
       // Dialled back so the board is unambiguously the brightest thing here.
       intensity: 0.55,
+      atmosphere: Atmosphere.forChapter(_chapter.number),
       child: SafeArea(
         child: Observes(
           listenables: <Listenable>[
@@ -254,6 +268,7 @@ class _GameScreenState extends State<GameScreen> {
             _scope.settings,
             _scope.progress,
             _scope.wallet,
+            _scope.cosmetics,
           ],
           builder: (BuildContext context) {
             final int sealed = _controller.state.sealedCount;
@@ -283,6 +298,8 @@ class _GameScreenState extends State<GameScreen> {
                       controller: _controller,
                       colorAssist: _scope.settings.colorAssist,
                       guideTube: _guideTube,
+                      ballStyle: _scope.cosmetics.ballStyle,
+                      vesselStyle: _scope.cosmetics.vesselStyle,
                     ),
                   ),
                 ),

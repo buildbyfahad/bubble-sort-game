@@ -8,6 +8,7 @@ import 'design/tokens.dart';
 import 'design/typography.dart';
 import 'services/ads_service.dart';
 import 'services/audio_service.dart';
+import 'services/cosmetics_service.dart';
 import 'services/haptic_service.dart';
 import 'services/progress_service.dart';
 import 'services/settings_service.dart';
@@ -47,6 +48,7 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
   SettingsService? _settings;
   ProgressService? _progress;
   WalletService? _wallet;
+  CosmeticsService? _cosmetics;
   AudioService? _audio;
   HapticService? _haptics;
   AdsService? _ads;
@@ -70,6 +72,7 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
     final SettingsService settings = await SettingsService.load();
     final ProgressService progress = await ProgressService.load(catalog.length);
     final WalletService wallet = await WalletService.load();
+    final CosmeticsService cosmetics = await CosmeticsService.load();
     final AudioService audio = AudioService(settings);
     final HapticService haptics = HapticService(settings);
     final AdsService ads = AdsService();
@@ -98,6 +101,7 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
       _settings = settings;
       _progress = progress;
       _wallet = wallet;
+      _cosmetics = cosmetics;
       _audio = audio;
       _haptics = haptics;
       _ads = ads;
@@ -155,6 +159,7 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
           settings: settings,
           progress: _progress!,
           wallet: _wallet!,
+          cosmetics: _cosmetics!,
           audio: _audio!,
           haptics: _haptics!,
           ads: _ads!,

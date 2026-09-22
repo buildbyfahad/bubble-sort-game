@@ -52,6 +52,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
     // the player's coins and streak behind is a lie about what it did.
     await scope.progress.resetAll();
     await scope.wallet.resetAll();
+    await scope.cosmetics.resetAll();
   }
 
   @override

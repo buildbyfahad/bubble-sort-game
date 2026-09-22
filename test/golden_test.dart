@@ -6,6 +6,7 @@ import 'package:bubble_sort/services/settings_service.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
 import 'package:bubble_sort/ui/screens/level_complete.dart';
 import 'package:bubble_sort/ui/screens/home_screen.dart';
+import 'package:bubble_sort/ui/screens/collection_screen.dart';
 import 'package:bubble_sort/ui/screens/daily_sheet.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
 import 'package:bubble_sort/ui/screens/shop_sheet.dart';
@@ -306,6 +307,21 @@ void main() {
       );
     });
   }
+
+  renderTest('collection', (WidgetTester tester) async {
+    useHandset(tester);
+    await tester.pumpWidget(harness(await buildScope(
+      child: const CollectionScreen(),
+      prefs: <String, Object>{
+        'wallet.coins': 420,
+        'cosmetics.owned': <String>['ball.candy'],
+        'cosmetics.ball': 'ball.candy',
+        for (int i = 1; i <= 30; i++) 'progress.best.$i': 9,
+      },
+    )));
+    await settle(tester, steps: 16);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/collection.png'));
+  });
 
   renderTest('daily reward — unclaimed, mid-streak', (WidgetTester tester) async {
     useHandset(tester);

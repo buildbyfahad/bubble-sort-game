@@ -21,9 +21,14 @@ class AmbientBackground extends StatefulWidget {
     super.key,
     required this.child,
     this.intensity = 1.0,
+    this.atmosphere = Atmosphere.menu,
   });
 
   final Widget child;
+
+  /// Which three colours the fields use. Screens inside a chapter pass the
+  /// chapter's own.
+  final Atmosphere atmosphere;
 
   /// Dialled down on the game screen so the board is unambiguously the
   /// brightest thing on the display.
@@ -73,6 +78,7 @@ class _AmbientBackgroundState extends State<AmbientBackground>
               painter: _AmbientPainter(
                 (_c.value * _steps).floorToDouble() / _steps,
                 widget.intensity,
+                widget.atmosphere,
               ),
               isComplex: true,
               willChange: true,
@@ -86,10 +92,11 @@ class _AmbientBackgroundState extends State<AmbientBackground>
 }
 
 class _AmbientPainter extends CustomPainter {
-  _AmbientPainter(this.t, this.intensity);
+  _AmbientPainter(this.t, this.intensity, this.atmosphere);
 
   final double t;
   final double intensity;
+  final Atmosphere atmosphere;
 
   void _field(Canvas canvas, Size size, Offset centre, double radius, Color color, double alpha) {
     canvas.drawCircle(
@@ -122,7 +129,7 @@ class _AmbientPainter extends CustomPainter {
       size,
       Offset(w * (0.22 + 0.10 * math.sin(a)), h * (0.16 + 0.06 * math.cos(a * 0.73))),
       w * 0.92,
-      DS.gold,
+      atmosphere.warm,
       0.052,
     );
 
@@ -132,7 +139,7 @@ class _AmbientPainter extends CustomPainter {
       size,
       Offset(w * (0.86 + 0.09 * math.cos(a * 0.61)), h * (0.72 + 0.07 * math.sin(a * 0.44))),
       w * 0.88,
-      DS.aqua,
+      atmosphere.cool,
       0.045,
     );
 
@@ -142,7 +149,7 @@ class _AmbientPainter extends CustomPainter {
       size,
       Offset(w * (0.42 + 0.06 * math.sin(a * 0.37 + 1.2)), h * (1.02 + 0.04 * math.cos(a * 0.29))),
       w * 1.05,
-      const Color(0xFF6B5BD8),
+      atmosphere.deep,
       0.055,
     );
 
@@ -165,5 +172,6 @@ class _AmbientPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_AmbientPainter old) => old.t != t || old.intensity != intensity;
+  bool shouldRepaint(_AmbientPainter old) =>
+      old.t != t || old.intensity != intensity || old.atmosphere != atmosphere;
 }

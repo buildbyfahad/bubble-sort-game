@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../data/cosmetics.dart';
 import '../../design/tokens.dart';
 import 'bubble.dart';
 import 'shatter.dart';
@@ -91,7 +92,12 @@ class Tube extends StatefulWidget {
     required this.onTap,
     this.fractureSeed = 0,
     this.hiddenBelow = 0,
+    this.ballStyle = BallStyle.classic,
+    this.skin = VesselStyle.glass,
   });
+
+  final BallStyle ballStyle;
+  final VesselStyle skin;
 
   /// Balls from the base that are concealed. See [BoardState.hiddenBelow].
   final int hiddenBelow;
@@ -249,6 +255,7 @@ class _TubeState extends State<Tube> with TickerProviderStateMixin {
                       child: CustomPaint(
                         painter: _VesselBackPainter(
                           metrics: m,
+                          skin: widget.skin,
                           selection: sel,
                           seal: sealT,
                           sealed: widget.sealed,
@@ -353,6 +360,7 @@ class _TubeState extends State<Tube> with TickerProviderStateMixin {
             colorAssist: widget.colorAssist,
             dim: widget.dim,
             hidden: k < widget.hiddenBelow,
+            style: widget.ballStyle,
           ),
         ),
       ));
@@ -380,6 +388,7 @@ class _TubeState extends State<Tube> with TickerProviderStateMixin {
           size: m.ball,
           colorAssist: widget.colorAssist,
           elevation: 1 + t * 1.4,
+          style: widget.ballStyle,
         ),
       ));
     }
@@ -392,6 +401,7 @@ class _TubeState extends State<Tube> with TickerProviderStateMixin {
 class _VesselBackPainter extends CustomPainter {
   _VesselBackPainter({
     required this.metrics,
+    required this.skin,
     required this.selection,
     required this.seal,
     required this.sealed,
@@ -401,6 +411,7 @@ class _VesselBackPainter extends CustomPainter {
   });
 
   final TubeMetrics metrics;
+  final VesselStyle skin;
   final double selection;
   final double seal;
   final bool sealed;
@@ -437,18 +448,34 @@ class _VesselBackPainter extends CustomPainter {
         ),
     );
 
-    // Interior. Darker than the page so contents pop, with a slight warm lift
-    // near the mouth where ambient light would actually reach.
+    // Interior. Darker than the page so contents pop, with a slight lift near
+    // the mouth where ambient light would actually reach. The skin decides
+    // what the glass is made of.
+    final (Color top, Color bottom) = switch (skin) {
+      VesselStyle.glass => (
+          Color.lerp(DS.surfaceHigh, DS.inkDeep, 0.42 + dim * 0.25)!.withValues(alpha: 0.94),
+          Color.lerp(DS.inkDeep, DS.surface, 0.16 - dim * 0.1)!.withValues(alpha: 0.97),
+        ),
+      VesselStyle.frost => (
+          Color.lerp(const Color(0xFFB9C8D8), DS.inkDeep, 0.55 + dim * 0.2)!.withValues(alpha: 0.96),
+          Color.lerp(const Color(0xFF8FA3B8), DS.inkDeep, 0.70)!.withValues(alpha: 0.98),
+        ),
+      VesselStyle.brass => (
+          Color.lerp(const Color(0xFF6B4E22), DS.inkDeep, 0.55 + dim * 0.2)!.withValues(alpha: 0.96),
+          Color.lerp(const Color(0xFF3A2A12), DS.inkDeep, 0.35)!.withValues(alpha: 0.98),
+        ),
+      VesselStyle.obsidian => (
+          Color.lerp(const Color(0xFF15171E), DS.inkDeep, 0.3 + dim * 0.2)!.withValues(alpha: 0.98),
+          DS.inkDeep.withValues(alpha: 1.0),
+        ),
+    };
     canvas.drawRRect(
       body,
       Paint()
         ..shader = ui.Gradient.linear(
           Offset(0, 0),
           Offset(0, size.height),
-          <Color>[
-            Color.lerp(DS.surfaceHigh, DS.inkDeep, 0.42 + dim * 0.25)!.withValues(alpha: 0.94),
-            Color.lerp(DS.inkDeep, DS.surface, 0.16 - dim * 0.1)!.withValues(alpha: 0.97),
-          ],
+          <Color>[top, bottom],
         ),
     );
 
@@ -503,15 +530,21 @@ class _VesselBackPainter extends CustomPainter {
     }
 
     // Edge. Brightest at the mouth, fading toward the base — a rim catching a
-    // light source that lives above the board.
+    // light source that lives above the board. Each skin has its own metal.
+    final Color rest = switch (skin) {
+      VesselStyle.glass => DS.hairlineStrong,
+      VesselStyle.frost => const Color(0xFFDCE8F4).withValues(alpha: 0.38),
+      VesselStyle.brass => const Color(0xFFE8B86A).withValues(alpha: 0.62),
+      VesselStyle.obsidian => const Color(0xFF9AA4B8).withValues(alpha: 0.30),
+    };
     final Color edgeTop = sealed && sealHue != null
-        ? Color.lerp(DS.hairlineStrong, sealHue!.light.withValues(alpha: 0.5), 0.75)!
-        : Color.lerp(DS.hairlineStrong, DS.gold.withValues(alpha: 0.85), selection)!;
+        ? Color.lerp(rest, sealHue!.light.withValues(alpha: 0.5), 0.75)!
+        : Color.lerp(rest, DS.gold.withValues(alpha: 0.85), selection)!;
     canvas.drawRRect(
       body.deflate(0.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.25 + selection * 0.6
+        ..strokeWidth = (skin == VesselStyle.brass ? 2.0 : 1.25) + selection * 0.6
         ..shader = ui.Gradient.linear(
           Offset(0, 0),
           Offset(0, size.height),
@@ -547,6 +580,7 @@ class _VesselBackPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_VesselBackPainter old) =>
+      old.skin != skin ||
       old.selection != selection ||
       old.seal != seal ||
       old.sealed != sealed ||

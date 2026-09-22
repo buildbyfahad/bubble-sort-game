@@ -232,6 +232,9 @@ class _LevelsScreenState extends State<LevelsScreen> with SingleTickerProviderSt
 
     return AmbientBackground(
       intensity: 0.85,
+      atmosphere: Atmosphere.forChapter(
+        scope.catalog.chapterOf(scope.progress.currentLevelId).number,
+      ),
       child: SafeArea(
         child: Observes(
           listenables: <Listenable>[scope.progress],

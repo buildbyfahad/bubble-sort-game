@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bubble_sort/data/level_catalog.dart';
 import 'package:bubble_sort/services/ads_service.dart';
 import 'package:bubble_sort/services/audio_service.dart';
+import 'package:bubble_sort/services/cosmetics_service.dart';
 import 'package:bubble_sort/services/haptic_service.dart';
 import 'package:bubble_sort/services/progress_service.dart';
 import 'package:bubble_sort/services/settings_service.dart';
@@ -91,11 +92,13 @@ Future<AppScope> buildScope({
   final SettingsService settings = await SettingsService.load();
   final ProgressService progress = await ProgressService.load(catalog.length);
   final WalletService wallet = await WalletService.load(clock: clock);
+  final CosmeticsService cosmetics = await CosmeticsService.load();
   return AppScope(
     catalog: catalog,
     settings: settings,
     progress: progress,
     wallet: wallet,
+    cosmetics: cosmetics,
     audio: AudioService(settings),
     haptics: HapticService(settings),
     ads: AdsService(),

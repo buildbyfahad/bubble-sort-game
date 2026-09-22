@@ -11,6 +11,7 @@ import '../widgets/icons.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/logo.dart';
 import '../widgets/surfaces.dart';
+import 'collection_screen.dart';
 import 'daily_sheet.dart';
 import 'game_screen.dart';
 import 'levels_screen.dart';
@@ -108,6 +109,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const Spacer(),
+                        RiseIn(
+                          index: 0,
+                          child: GhostIconButton(
+                            icon: DIcons.grid,
+                            semanticLabel: 'Collection',
+                            onTap: () {
+                              scope.audio.whoosh();
+                              Navigator.of(context).push(riseRoute<void>(const CollectionScreen()));
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: DS.s8),
                         RiseIn(
                           index: 0,
                           child: GhostIconButton(

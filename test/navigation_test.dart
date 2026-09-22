@@ -103,10 +103,10 @@ void main() {
     await settle(tester, steps: 16);
 
     await tester.tap(find.byType(HomeScreen).first, warnIfMissed: false);
-    final Finder gear = find.byWidgetPredicate(
-      (Widget w) => w.runtimeType.toString() == 'GhostIconButton',
-    );
-    await tester.tap(gear.first);
+    // Settings is the *last* ghost button on the utility row now that the
+    // collection sits beside it. Found by its label rather than position, so
+    // the row can gain another control without this test caring.
+    await tester.tap(find.bySemanticsLabel('Settings'));
     await settle(tester, steps: 20);
     expect(tester.takeException(), isNull);
     expect(find.byType(SettingsSheet), findsOneWidget);

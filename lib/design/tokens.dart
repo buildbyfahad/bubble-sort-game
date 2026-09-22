@@ -153,6 +153,36 @@ class DS {
   static const Duration tCelebrate = Duration(milliseconds: 620);
 }
 
+/// The three colour fields behind a screen.
+///
+/// Each chapter gets its own, so forty levels do not all look like one room.
+/// The pairs are chosen the way the hue palette was: a warm and a cool that
+/// sit apart, with a deep third to anchor. The defaults are the menu's.
+@immutable
+class Atmosphere {
+  const Atmosphere(this.name, this.warm, this.cool, this.deep);
+
+  final String name;
+  final Color warm;
+  final Color cool;
+  final Color deep;
+
+  static const Atmosphere menu = Atmosphere('Menu', DS.gold, DS.aqua, Color(0xFF6B5BD8));
+
+  /// Cycled by chapter. Six is enough that neighbouring chapters never
+  /// share one and a returning player can still place a chapter by its light.
+  static const List<Atmosphere> chapters = <Atmosphere>[
+    Atmosphere('Ochre', Color(0xFFE0A84A), Color(0xFF3E8F9E), Color(0xFF5E4AA8)),
+    Atmosphere('Teal', Color(0xFF3AA79A), Color(0xFF4A7BD0), Color(0xFF2E4C8C)),
+    Atmosphere('Rose', Color(0xFFD86A8C), Color(0xFF6A5BD8), Color(0xFF7A2E58)),
+    Atmosphere('Ember', Color(0xFFE2703C), Color(0xFF9A4A9E), Color(0xFF4C2A3E)),
+    Atmosphere('Frost', Color(0xFF7FB8E8), Color(0xFF4FD0C0), Color(0xFF3A4A9C)),
+    Atmosphere('Violet', Color(0xFFB07AE8), Color(0xFF3F9AD8), Color(0xFF3E2A7C)),
+  ];
+
+  static Atmosphere forChapter(int number) => chapters[(number - 1) % chapters.length];
+}
+
 /// Optional shape marker drawn faintly inside a bubble when the player turns
 /// on colour-blind assist — redundant encoding, so hue is never load-bearing.
 enum HueGlyph { dot, ring, bar, triangle, diamond, cross, chevron, square, arc, dash, star, hex }

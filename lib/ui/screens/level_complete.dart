@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../data/cosmetics.dart';
 import '../../data/level.dart';
 import '../../design/tokens.dart';
 import '../../engine/game_controller.dart';
@@ -68,6 +69,7 @@ class LevelCompleteSheet extends StatefulWidget {
     required this.hintsAwarded,
     required this.coinsAwarded,
     this.bestFlow = 0,
+    this.unlocked,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -85,6 +87,9 @@ class LevelCompleteSheet extends StatefulWidget {
 
   /// Longest run of seals without an undo. Shown when it earned a multiplier.
   final int bestFlow;
+
+  /// A cosmetic this clear granted, if any. Finales only.
+  final Cosmetic? unlocked;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -194,6 +199,7 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
               hintsAwarded: widget.hintsAwarded,
               coinsAwarded: widget.coinsAwarded,
               bestFlow: widget.bestFlow,
+              unlocked: widget.unlocked,
               overallBefore: widget.overallBefore,
               overallAfter: widget.overallAfter,
               hasNext: widget.hasNext,
@@ -459,6 +465,7 @@ class _ResultCard extends StatelessWidget {
     required this.hintsAwarded,
     required this.coinsAwarded,
     this.bestFlow = 0,
+    this.unlocked,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -478,6 +485,7 @@ class _ResultCard extends StatelessWidget {
 
   /// Longest run of seals without an undo. Shown when it earned a multiplier.
   final int bestFlow;
+  final Cosmetic? unlocked;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -562,6 +570,18 @@ class _ResultCard extends StatelessWidget {
                     start: 0.52,
                   ),
               ],
+            ),
+          ],
+          if (unlocked != null) ...<Widget>[
+            const SizedBox(height: DS.s12),
+            Center(
+              child: _Reward(
+                icon: DIcons.grid,
+                label: 'Unlocked · ${unlocked!.name}',
+                accent: DS.gold,
+                animation: animation,
+                start: 0.56,
+              ),
             ),
           ],
           const SizedBox(height: DS.s20),

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../data/cosmetics.dart';
 import '../../design/tokens.dart';
 
 /// A single ball.
@@ -31,7 +32,12 @@ class Bubble extends StatelessWidget {
     this.elevation = 1.0,
     this.dim = 0.0,
     this.hidden = false,
+    this.style = BallStyle.classic,
   });
+
+  /// The equipped look. Every style keeps the hue exactly — a cosmetic that
+  /// changed the colours would change the puzzle.
+  final BallStyle style;
 
   /// Concealed: drawn as an unlit glass sphere with a question mark, in no
   /// colour at all. The hue is still passed so the widget's identity is
@@ -70,6 +76,7 @@ class Bubble extends StatelessWidget {
           colorAssist: colorAssist,
           elevation: elevation,
           dim: dim,
+          style: style,
         ),
         isComplex: true,
         willChange: false,
@@ -84,12 +91,14 @@ class _BubblePainter extends CustomPainter {
     required this.colorAssist,
     required this.elevation,
     required this.dim,
+    required this.style,
   });
 
   final BubbleHue hue;
   final bool colorAssist;
   final double elevation;
   final double dim;
+  final BallStyle style;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -125,6 +134,35 @@ class _BubblePainter extends CustomPainter {
     Color mix(Color a, double t) => Color.lerp(a, DS.inkDeep, dim * 0.35)!.withValues(
           alpha: a.a * lit.clamp(0.0, 1.0),
         );
+
+    // The other looks each own their whole render after the shadow. They are
+    // separate lighting models, not tweaks to this one, and sharing passes
+    // between them is how every style ends up looking like the classic with
+    // a sticker on it.
+    switch (style) {
+      case BallStyle.classic:
+        break;
+      case BallStyle.candy:
+        _paintCandy(canvas, c, r, lit, mix);
+        if (colorAssist) _paintGlyph(canvas, c, r, lit);
+        return;
+      case BallStyle.ink:
+        _paintInk(canvas, c, r, lit, mix);
+        if (colorAssist) _paintGlyph(canvas, c, r, lit);
+        return;
+      case BallStyle.gem:
+        _paintGem(canvas, c, r, lit, mix);
+        if (colorAssist) _paintGlyph(canvas, c, r, lit);
+        return;
+      case BallStyle.neon:
+        _paintNeon(canvas, c, r, lit, mix);
+        if (colorAssist) _paintGlyph(canvas, c, r, lit);
+        return;
+      case BallStyle.planet:
+        _paintPlanet(canvas, c, r, lit, mix);
+        if (colorAssist) _paintGlyph(canvas, c, r, lit);
+        return;
+    }
 
     // 2 — body. Key light from upper-left; the gradient centre sits off-axis
     // and the radius runs past the edge so the terminator stays soft.
@@ -214,6 +252,218 @@ class _BubblePainter extends CustomPainter {
     if (colorAssist) _paintGlyph(canvas, c, r, lit);
   }
 
+  // ------------------------------------------------------------- the looks
+
+  /// Hard candy: a saturated body, a huge sharp specular and a white stripe.
+  /// Everything the classic deliberately avoids, on purpose — this is the
+  /// "toy" look, and it should feel like one.
+  void _paintCandy(Canvas canvas, Offset c, double r, double lit, Color Function(Color, double) mix) {
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          c + Offset(-r * 0.25, -r * 0.30),
+          r * 1.15,
+          <Color>[mix(hue.light, 0), mix(hue.base, 0), mix(hue.deep, 0)],
+          <double>[0.0, 0.40, 1.0],
+        ),
+    );
+    // A diagonal gloss band across the upper half.
+    canvas.save();
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: c, radius: r)));
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(-0.6);
+    canvas.drawRect(
+      Rect.fromLTWH(-r * 1.2, -r * 0.55, r * 2.4, r * 0.30),
+      Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.30 * lit),
+    );
+    canvas.restore();
+    // The hard specular.
+    canvas.drawOval(
+      Rect.fromCenter(center: c + Offset(-r * 0.36, -r * 0.44), width: r * 0.50, height: r * 0.34),
+      Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.85 * lit),
+    );
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = ui.Gradient.radial(c, r, <Color>[
+          hue.deep.withValues(alpha: 0), hue.deep.withValues(alpha: 0), hue.deep.withValues(alpha: 0.45),
+        ], <double>[0.0, 0.82, 1.0]),
+    );
+  }
+
+  /// Ink: matte, no specular at all, a soft darkening toward the edge like a
+  /// drop of pigment. The quietest of the looks.
+  void _paintInk(Canvas canvas, Offset c, double r, double lit, Color Function(Color, double) mix) {
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          c + Offset(-r * 0.10, -r * 0.12),
+          r * 1.05,
+          <Color>[mix(hue.base, 0), mix(hue.base, 0), mix(hue.deep, 0)],
+          <double>[0.0, 0.55, 1.0],
+        ),
+    );
+    // A faint, broad bloom where the key light would fall — not a highlight,
+    // more like paper showing through.
+    canvas.drawCircle(
+      c + Offset(-r * 0.30, -r * 0.30),
+      r * 0.55,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          c + Offset(-r * 0.30, -r * 0.30),
+          r * 0.55,
+          <Color>[hue.light.withValues(alpha: 0.22 * lit), hue.light.withValues(alpha: 0)],
+        ),
+    );
+  }
+
+  /// Gemstone: a cut stone. A dark body with a ring of facets — lighter where
+  /// they face the key light, darker where they face away — and a bright
+  /// table on top.
+  void _paintGem(Canvas canvas, Offset c, double r, double lit, Color Function(Color, double) mix) {
+    canvas.drawCircle(c, r, Paint()..color = mix(hue.deep, 0));
+    const int facets = 8;
+    for (int i = 0; i < facets; i++) {
+      final double a0 = i * 2 * math.pi / facets - math.pi / 2;
+      final double a1 = (i + 1) * 2 * math.pi / facets - math.pi / 2;
+      final double mid = (a0 + a1) / 2;
+      // How much this facet faces the upper-left light.
+      final double facing = (math.cos(mid + math.pi * 0.75) + 1) / 2;
+      final Path f = Path()
+        ..moveTo(c.dx + math.cos(a0) * r * 0.55, c.dy + math.sin(a0) * r * 0.55)
+        ..lineTo(c.dx + math.cos(a0) * r, c.dy + math.sin(a0) * r)
+        ..lineTo(c.dx + math.cos(a1) * r, c.dy + math.sin(a1) * r)
+        ..lineTo(c.dx + math.cos(a1) * r * 0.55, c.dy + math.sin(a1) * r * 0.55)
+        ..close();
+      canvas.drawPath(
+        f,
+        Paint()..color = Color.lerp(mix(hue.deep, 0), mix(hue.light, 0), 0.15 + facing * 0.75)!,
+      );
+      canvas.drawPath(
+        f,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.7
+          ..color = hue.deep.withValues(alpha: 0.5),
+      );
+    }
+    // The table.
+    final Path table = Path();
+    for (int i = 0; i < facets; i++) {
+      final double a = i * 2 * math.pi / facets - math.pi / 2;
+      final Offset p = Offset(c.dx + math.cos(a) * r * 0.55, c.dy + math.sin(a) * r * 0.55);
+      i == 0 ? table.moveTo(p.dx, p.dy) : table.lineTo(p.dx, p.dy);
+    }
+    table.close();
+    canvas.drawPath(
+      table,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          c + Offset(-r * 0.5, -r * 0.5),
+          c + Offset(r * 0.5, r * 0.5),
+          <Color>[mix(hue.light, 0), mix(hue.base, 0)],
+        ),
+    );
+    canvas.drawCircle(
+      c + Offset(-r * 0.22, -r * 0.26),
+      r * 0.12,
+      Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.7 * lit),
+    );
+  }
+
+  /// Neon: a near-black core with the hue as a glowing rim and a hot centre
+  /// spot, like a tube light seen end-on. Reads best on the dark ground.
+  void _paintNeon(Canvas canvas, Offset c, double r, double lit, Color Function(Color, double) mix) {
+    canvas.drawCircle(c, r * 0.96, Paint()..color = mix(DS.inkDeep, 0));
+    // Outer glow, past the rim.
+    canvas.drawCircle(
+      c,
+      r * 1.06,
+      Paint()
+        ..shader = ui.Gradient.radial(c, r * 1.06, <Color>[
+          hue.base.withValues(alpha: 0), hue.base.withValues(alpha: 0.55 * lit), hue.base.withValues(alpha: 0),
+        ], <double>[0.72, 0.90, 1.0])
+        ..blendMode = BlendMode.plus,
+    );
+    // The rim itself.
+    canvas.drawCircle(
+      c,
+      r * 0.88,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.14
+        ..color = mix(hue.light, 0),
+    );
+    // The hot centre.
+    canvas.drawCircle(
+      c,
+      r * 0.36,
+      Paint()
+        ..shader = ui.Gradient.radial(c, r * 0.36, <Color>[
+          Color.lerp(hue.light, const Color(0xFFFFFFFF), 0.5)!.withValues(alpha: 0.95 * lit),
+          hue.base.withValues(alpha: 0.6 * lit),
+          hue.base.withValues(alpha: 0),
+        ], <double>[0.0, 0.5, 1.0])
+        ..blendMode = BlendMode.plus,
+    );
+  }
+
+  /// Planets: the classic sphere with a tilted ring and a band of cloud.
+  void _paintPlanet(Canvas canvas, Offset c, double r, double lit, Color Function(Color, double) mix) {
+    final double body = r * 0.78;
+    // Ring, back half first so the planet occludes it.
+    void ring(bool front) {
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.rotate(-0.42);
+      final Rect rr = Rect.fromCenter(center: Offset.zero, width: r * 2.0, height: r * 0.62);
+      final Paint p = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.16
+        ..color = hue.light.withValues(alpha: (front ? 0.85 : 0.45) * lit);
+      canvas.drawArc(rr, front ? 0 : math.pi, math.pi, false, p);
+      canvas.restore();
+    }
+    ring(false);
+    canvas.drawCircle(
+      c,
+      body,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          c + Offset(-body * 0.34, -body * 0.40),
+          body * 1.32,
+          <Color>[mix(hue.light, 0), mix(hue.base, 0), mix(hue.deep, 0)],
+          <double>[0.0, 0.48, 1.0],
+        ),
+    );
+    // A band across the equator.
+    canvas.save();
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: c, radius: body)));
+    canvas.drawRect(
+      Rect.fromCenter(center: c + Offset(0, body * 0.18), width: body * 2.2, height: body * 0.26),
+      Paint()..color = hue.deep.withValues(alpha: 0.35 * lit),
+    );
+    canvas.drawRect(
+      Rect.fromCenter(center: c + Offset(0, -body * 0.30), width: body * 2.2, height: body * 0.12),
+      Paint()..color = hue.light.withValues(alpha: 0.28 * lit),
+    );
+    canvas.restore();
+    canvas.drawCircle(
+      c,
+      body,
+      Paint()
+        ..shader = ui.Gradient.radial(c, body, <Color>[
+          hue.deep.withValues(alpha: 0), hue.deep.withValues(alpha: 0), hue.deep.withValues(alpha: 0.4),
+        ], <double>[0.0, 0.78, 1.0]),
+    );
+    ring(true);
+  }
+
   /// Redundant encoding for colour-vision deficiency. Kept at low contrast and
   /// small scale: it should be findable when you look for it and invisible
   /// when you are not.
@@ -293,6 +543,7 @@ class _BubblePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BubblePainter old) =>
+      old.style != style ||
       old.hue != hue ||
       old.colorAssist != colorAssist ||
       old.elevation != elevation ||

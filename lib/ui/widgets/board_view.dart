@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../../data/cosmetics.dart';
 import '../../design/tokens.dart';
 import '../../engine/board_state.dart';
 import '../../engine/game_controller.dart';
@@ -167,10 +168,19 @@ class BoardLayout {
 /// The board: vessels laid out to fit, plus the overlay that carries balls
 /// between them.
 class BoardView extends StatelessWidget {
-  const BoardView({super.key, required this.controller, required this.colorAssist, this.guideTube});
+  const BoardView({
+    super.key,
+    required this.controller,
+    required this.colorAssist,
+    this.guideTube,
+    this.ballStyle = BallStyle.classic,
+    this.vesselStyle = VesselStyle.glass,
+  });
 
   final GameController controller;
   final bool colorAssist;
+  final BallStyle ballStyle;
+  final VesselStyle vesselStyle;
 
   /// Vessel the first-run guide is pointing at, if any.
   final int? guideTube;
@@ -224,6 +234,8 @@ class BoardView extends StatelessWidget {
                       // a board crack alike and no level is a repeat of the last.
                       fractureSeed: i * 31 + controller.level.id * 7,
                       hiddenBelow: state.hiddenBelow[i],
+                      ballStyle: ballStyle,
+                      skin: vesselStyle,
                       hinted: controller.hint?.to == i,
                       // Finished vessels step back so attention stays on the
                       // unsolved ones, without them disappearing.
@@ -249,6 +261,7 @@ class BoardView extends StatelessWidget {
                       pour: flight,
                       destBase: visible[flight.to].length,
                       colorAssist: colorAssist,
+                      ballStyle: ballStyle,
                     ),
                   ),
                 ),
@@ -284,9 +297,11 @@ class _FlightOverlay extends StatefulWidget {
     required this.pour,
     required this.destBase,
     required this.colorAssist,
+    required this.ballStyle,
   });
 
   final BoardLayout layout;
+  final BallStyle ballStyle;
   final Pour pour;
 
   /// How many balls were already in the destination when the pour began.
@@ -350,6 +365,7 @@ class _FlightOverlayState extends State<_FlightOverlay> with SingleTickerProvide
                   size: l.ball,
                   colorAssist: widget.colorAssist,
                   elevation: 1 + arcHeight * 1.6,
+                  style: widget.ballStyle,
                 ),
               ),
             ),

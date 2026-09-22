@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../data/level_catalog.dart';
 import '../services/ads_service.dart';
 import '../services/audio_service.dart';
+import '../services/cosmetics_service.dart';
 import '../services/haptic_service.dart';
 import '../services/progress_service.dart';
 import '../services/settings_service.dart';
@@ -21,6 +22,7 @@ class AppScope extends InheritedWidget {
     required this.settings,
     required this.progress,
     required this.wallet,
+    required this.cosmetics,
     required this.audio,
     required this.haptics,
     required this.ads,
@@ -31,6 +33,7 @@ class AppScope extends InheritedWidget {
   final SettingsService settings;
   final ProgressService progress;
   final WalletService wallet;
+  final CosmeticsService cosmetics;
   final AudioService audio;
   final HapticService haptics;
   final AdsService ads;
@@ -47,6 +50,7 @@ class AppScope extends InheritedWidget {
       settings != old.settings ||
       progress != old.progress ||
       wallet != old.wallet ||
+      cosmetics != old.cosmetics ||
       audio != old.audio ||
       haptics != old.haptics ||
       ads != old.ads;
