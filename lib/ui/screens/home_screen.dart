@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../../data/daily_challenge.dart';
+import '../../data/level.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../app_scope.dart';
@@ -266,12 +268,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   RiseIn(
                     index: 4,
-                    child: _DailyStrip(
-                      claimable: scope.wallet.canClaimDaily,
+                    child: _TodayCard(
+                      rewardReady: scope.wallet.canClaimDaily,
                       streak: scope.wallet.canClaimDaily
                           ? scope.wallet.streakIfClaimed
                           : scope.wallet.streak,
-                      onTap: () => _openDaily(scope),
+                      challenge: DailyChallenge.levelForNormal(scope.wallet.today, scope.catalog),
+                      challengeDone: scope.progress.isDailyCleared(scope.wallet.today),
+                      onReward: () => _openDaily(scope),
+                      onChallenge: () {
+                        final Level l =
+                            DailyChallenge.levelForNormal(scope.wallet.today, scope.catalog);
+                        scope.audio.whoosh();
+                        Navigator.of(context).push(
+                          riseRoute<void>(GameScreen(levelId: l.id, daily: true)),
+                        );
+                      },
                     ),
                   ),
 
@@ -370,34 +382,85 @@ class _BalancePillState extends State<_BalancePill>
       );
 }
 
-/// The daily reward, as one strip rather than a card.
+/// Today: the reward and the challenge, as two rows of one card.
 ///
-/// Two states with genuinely different weights: unclaimed is gold, lit and
-/// carries a chevron, because it is a thing to do; claimed is a quiet line of
-/// text, because it is a thing already done. Giving both states the same
-/// visual weight is how a menu ends up permanently shouting about something
-/// the player dealt with an hour ago.
-class _DailyStrip extends StatefulWidget {
-  const _DailyStrip({
-    required this.claimable,
+/// Two things that reset on the same calendar day belong together, and a
+/// menu that gave each its own card would be a menu of cards. Each row has
+/// two states with genuinely different weights: something to do is gold and
+/// carries a chevron; something done is a quiet line of text.
+class _TodayCard extends StatelessWidget {
+  const _TodayCard({
+    required this.rewardReady,
     required this.streak,
+    required this.challenge,
+    required this.challengeDone,
+    required this.onReward,
+    required this.onChallenge,
+  });
+
+  final bool rewardReady;
+  final int streak;
+  final Level challenge;
+  final bool challengeDone;
+  final VoidCallback onReward;
+  final VoidCallback onChallenge;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(DS.rMd),
+          color: const Color(0x08FFFFFF),
+          border: Border.all(color: DS.hairline),
+        ),
+        child: Column(
+          children: <Widget>[
+            _TodayRow(
+              icon: DIcons.flame,
+              live: rewardReady,
+              title: rewardReady ? 'Daily reward ready' : 'Daily reward claimed',
+              detail: rewardReady
+                  ? 'Day $streak'
+                  : (streak > 0 ? '$streak day streak' : ''),
+              onTap: onReward,
+            ),
+            Container(height: 1, color: const Color(0x0DFFFFFF)),
+            _TodayRow(
+              icon: DIcons.play,
+              live: !challengeDone,
+              title: challengeDone ? 'Challenge cleared' : "Today's challenge",
+              detail: challengeDone
+                  ? 'Back tomorrow'
+                  : '${challenge.colorCount} colours · +${DailyChallenge.reward}',
+              onTap: onChallenge,
+            ),
+          ],
+        ),
+      );
+}
+
+class _TodayRow extends StatefulWidget {
+  const _TodayRow({
+    required this.icon,
+    required this.live,
+    required this.title,
+    required this.detail,
     required this.onTap,
   });
 
-  final bool claimable;
-  final int streak;
+  final DIcons icon;
+  final bool live;
+  final String title;
+  final String detail;
   final VoidCallback onTap;
 
   @override
-  State<_DailyStrip> createState() => _DailyStripState();
+  State<_TodayRow> createState() => _TodayRowState();
 }
 
-class _DailyStripState extends State<_DailyStrip> with TickerProviderStateMixin, PressMixin {
+class _TodayRowState extends State<_TodayRow> with TickerProviderStateMixin, PressMixin {
   @override
   Widget build(BuildContext context) {
-    final bool live = widget.claimable;
-    final Color accent = live ? DS.gold : DS.textTertiary;
-
+    final Color accent = widget.live ? DS.gold : DS.textTertiary;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => pressDown(),
@@ -406,34 +469,37 @@ class _DailyStripState extends State<_DailyStrip> with TickerProviderStateMixin,
       onTap: widget.onTap,
       child: AnimatedBuilder(
         animation: press,
-        builder: (BuildContext context, _) => Transform.scale(
-          scale: 1 - press.value.clamp(0.0, 1.0) * 0.015,
+        builder: (BuildContext context, _) => Opacity(
+          opacity: 1 - press.value.clamp(0.0, 1.0) * 0.25,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(DS.rMd),
-              color: live ? DS.gold.withValues(alpha: 0.08) : const Color(0x08FFFFFF),
-              border: Border.all(
-                color: live ? DS.gold.withValues(alpha: 0.32) : DS.hairline,
-              ),
+              color: widget.live ? DS.gold.withValues(alpha: 0.06) : null,
             ),
             child: Row(
               children: <Widget>[
-                DIcon(DIcons.flame, size: 16, color: accent),
+                DIcon(widget.icon, size: 15, color: accent),
                 const SizedBox(width: DS.s12),
                 Expanded(
                   child: Text(
-                    live
-                        ? 'Daily reward ready'
-                        : (widget.streak > 0
-                            ? '${widget.streak} day streak · back tomorrow'
-                            : 'Daily reward claimed'),
-                    style: live
+                    widget.title,
+                    style: widget.live
                         ? Type.bodyStrong.copyWith(color: DS.gold, fontSize: 13.5)
                         : Type.caption,
                   ),
                 ),
-                if (live) const DIcon(DIcons.next, size: 14, color: DS.gold),
+                if (widget.detail.isNotEmpty)
+                  Text(
+                    widget.detail,
+                    style: Type.caption.copyWith(
+                      color: widget.live ? DS.gold.withValues(alpha: 0.7) : DS.textTertiary,
+                      fontSize: 12,
+                    ),
+                  ),
+                if (widget.live) ...<Widget>[
+                  const SizedBox(width: DS.s8),
+                  const DIcon(DIcons.next, size: 13, color: DS.gold),
+                ],
               ],
             ),
           ),

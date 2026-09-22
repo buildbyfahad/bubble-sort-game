@@ -70,6 +70,7 @@ class LevelCompleteSheet extends StatefulWidget {
     required this.coinsAwarded,
     this.bestFlow = 0,
     this.unlocked,
+    this.daily = false,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -90,6 +91,9 @@ class LevelCompleteSheet extends StatefulWidget {
 
   /// A cosmetic this clear granted, if any. Finales only.
   final Cosmetic? unlocked;
+
+  /// Today's challenge rather than a campaign level.
+  final bool daily;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -200,6 +204,7 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
               coinsAwarded: widget.coinsAwarded,
               bestFlow: widget.bestFlow,
               unlocked: widget.unlocked,
+              daily: widget.daily,
               overallBefore: widget.overallBefore,
               overallAfter: widget.overallAfter,
               hasNext: widget.hasNext,
@@ -466,6 +471,7 @@ class _ResultCard extends StatelessWidget {
     required this.coinsAwarded,
     this.bestFlow = 0,
     this.unlocked,
+    this.daily = false,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -486,6 +492,7 @@ class _ResultCard extends StatelessWidget {
   /// Longest run of seals without an undo. Shown when it earned a multiplier.
   final int bestFlow;
   final Cosmetic? unlocked;
+  final bool daily;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -505,7 +512,7 @@ class _ResultCard extends StatelessWidget {
         children: <Widget>[
           Center(
             child: Text(
-              'LEVEL ${level.id} CLEARED',
+              daily ? 'CHALLENGE CLEARED' : 'LEVEL ${level.id} CLEARED',
               style: Type.label.copyWith(color: DS.textTertiary),
             ),
           ),
@@ -584,24 +591,26 @@ class _ResultCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: DS.s20),
-          Row(
-            children: <Widget>[
-              Text('PROGRESS', style: Type.label),
-              const Spacer(),
-              Text(
-                '${(overallAfter * 100).toStringAsFixed(1)}%',
-                style: Type.label.copyWith(color: DS.textSecondary),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.s8),
-          _DelayedProgress(
-            animation: animation,
-            from: overallBefore,
-            to: overallAfter,
-            start: 0.42,
-          ),
+          if (!daily) ...<Widget>[
+            const SizedBox(height: DS.s20),
+            Row(
+              children: <Widget>[
+                Text('PROGRESS', style: Type.label),
+                const Spacer(),
+                Text(
+                  '${(overallAfter * 100).toStringAsFixed(1)}%',
+                  style: Type.label.copyWith(color: DS.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.s8),
+            _DelayedProgress(
+              animation: animation,
+              from: overallBefore,
+              to: overallAfter,
+              start: 0.42,
+            ),
+          ],
           const SizedBox(height: DS.s20),
           PrimaryButton(
             label: hasNext ? 'Next level' : 'Back to menu',

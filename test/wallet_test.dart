@@ -1,6 +1,10 @@
+import 'package:bubble_sort/data/daily_challenge.dart';
+import 'package:bubble_sort/data/level.dart';
 import 'package:bubble_sort/services/wallet_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'render_harness.dart';
 
 /// The economy.
 ///
@@ -18,6 +22,26 @@ int _dayIndex(DateTime d) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('daily challenge', () {
+    test('is the same board for the same day, everywhere', () {
+      final Level a = DailyChallenge.levelForNormal(20_700, loadCatalog());
+      final Level b = DailyChallenge.levelForNormal(20_700, loadCatalog());
+      expect(a.id, b.id);
+    });
+
+    test('changes from day to day, and is never a rule-changing level', () {
+      final Set<int> seen = <int>{};
+      for (int d = 20_700; d < 20_760; d++) {
+        final Level l = DailyChallenge.levelForNormal(d, loadCatalog());
+        expect(l.mode, LevelMode.normal, reason: 'day $d picked level ${l.id}');
+        seen.add(l.id);
+      }
+      // Sixty days should not keep landing on the same handful of boards.
+      expect(seen.length, greaterThan(40));
+    });
+  });
+
 
   group('balances', () {
     test('hints start stocked so the mechanic is discoverable', () async {

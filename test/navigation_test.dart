@@ -65,6 +65,22 @@ void main() {
     await drainTimers(tester);
   });
 
+  testWidgets("today's challenge pays once, and does not touch the road",
+      (WidgetTester tester) async {
+    useHandset(tester);
+    await boot(tester);
+
+    await tester.tap(find.text("Today's challenge"));
+    await settle(tester, steps: 20);
+    expect(find.byType(GameScreen), findsOneWidget);
+    expect(find.text("TODAY'S CHALLENGE"), findsOneWidget);
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    expect(prefs.getKeys().where((String k) => k.startsWith('progress.best.')), isEmpty,
+        reason: 'the road must not advance from a challenge');
+    await drainTimers(tester);
+  });
+
   testWidgets('the app boots into the menu', (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester);

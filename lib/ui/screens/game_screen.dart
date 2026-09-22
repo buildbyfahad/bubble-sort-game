@@ -5,6 +5,7 @@ import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../engine/game_controller.dart';
 import '../../data/cosmetics.dart';
+import '../../data/daily_challenge.dart';
 import '../../services/wallet_service.dart';
 import '../app_scope.dart';
 import '../transitions.dart';
@@ -25,9 +26,13 @@ import 'settings_sheet.dart';
 /// contrast — every other element on this screen is deliberately quieter than
 /// the vessels.
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, required this.levelId});
+  const GameScreen({super.key, required this.levelId, this.daily = false});
 
   final int levelId;
+
+  /// Played as today's challenge rather than as a campaign level: pays the
+  /// challenge reward, does not advance the road, and has no "next".
+  final bool daily;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -133,6 +138,7 @@ class _GameScreenState extends State<GameScreen> {
   // ------------------------------------------------------------------- flow
 
   Future<void> _handleSolved() async {
+    if (widget.daily) return _handleDailySolved();
     final Level level = _controller.level;
     final double before = _scope.progress.completion;
     final bool firstClear = !_scope.progress.isCleared(level.id);
@@ -188,6 +194,52 @@ class _GameScreenState extends State<GameScreen> {
               ..pop()
               ..pushReplacement(riseRoute<void>(GameScreen(levelId: level.id + 1)));
           },
+          onReplay: () {
+            _scope.audio.tap();
+            Navigator.of(context).pop();
+            setState(() {
+              _controller
+                ..removeListener(_advanceTutorial)
+                ..removeListener(_driveMusic)
+                ..dispose();
+              _build();
+            });
+          },
+          onHome: () {
+            _scope.audio.whoosh();
+            Navigator.of(context)
+              ..pop()
+              ..pop();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDailySolved() async {
+    final Level level = _controller.level;
+    final int day = _scope.wallet.today;
+    final bool first = await _scope.progress.recordDailyClear(day, _controller.moves);
+    final int coins = first ? DailyChallenge.reward : 5;
+    await _scope.wallet.grantCoins(coins);
+    if (!mounted) return;
+
+    await Navigator.of(context).push<void>(
+      sheetRoute<void>(
+        dismissible: false,
+        LevelCompleteSheet(
+          level: level,
+          moves: _controller.moves,
+          best: _controller.moves,
+          improved: false,
+          hintsAwarded: 0,
+          coinsAwarded: coins,
+          bestFlow: _controller.bestFlow,
+          overallBefore: _scope.progress.completion,
+          overallAfter: _scope.progress.completion,
+          hasNext: false,
+          daily: true,
+          onNext: () {},
           onReplay: () {
             _scope.audio.tap();
             Navigator.of(context).pop();
@@ -280,6 +332,7 @@ class _GameScreenState extends State<GameScreen> {
                   chapter: _chapter,
                   sealed: sealed,
                   flow: _controller.flow,
+                  daily: widget.daily,
                   onBack: () {
                     _scope.audio.tap();
                     Navigator.of(context).pop();
@@ -443,6 +496,7 @@ class _TopBar extends StatelessWidget {
     required this.chapter,
     required this.sealed,
     required this.flow,
+    required this.daily,
     required this.onBack,
     required this.onSettings,
   });
@@ -451,10 +505,12 @@ class _TopBar extends StatelessWidget {
   final Chapter chapter;
   final int sealed;
   final int flow;
+  final bool daily;
   final VoidCallback onBack;
   final VoidCallback onSettings;
 
   String get _title {
+    if (daily) return 'TODAY\'S CHALLENGE';
     // A finale or a precision level says so instead of its chapter — the
     // chapter is where you are, the mode is what is about to happen to you.
     if (level.isBoss) return 'LEVEL ${level.id} · FINALE';
@@ -474,7 +530,7 @@ class _TopBar extends StatelessWidget {
                   Text(
                     _title,
                     style: Type.labelBright.copyWith(
-                      color: level.isBoss
+                      color: daily || level.isBoss
                           ? DS.gold
                           : (level.isPrecision ? DS.hues[0].light : null),
                     ),

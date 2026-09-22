@@ -357,6 +357,20 @@ only the dozen rows on screen are ever built. Every node's position is a pure
 function of its index, which is what lets "scroll to where the player is" be
 computed arithmetically rather than by measuring anything.
 
+### Modes
+
+Three ways a level differs from ordinary, each introduced by chapter rather
+than all at once: **hidden balls** (chapter 4+), **precision** budgets (every
+fifth level from chapter 2), and a **finale** closing every chapter. See
+`README.md` for the rules. The principle behind all three is that a level
+should occasionally ask the player to think *differently*, not merely more.
+
+### Atmospheres
+
+Each chapter has its own three colour fields behind the board and road, cycled
+through six pairings so neighbours never share one. A returning player can
+place a chapter by its light before reading a name.
+
 ### The catalogue
 
 **1000 levels across 25 chapters**, all generated and verified by

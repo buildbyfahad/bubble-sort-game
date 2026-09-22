@@ -27,6 +27,8 @@ class ProgressService extends ChangeNotifier {
 
   static const String _kBest = 'progress.best.';
   static const String _kSeenTutorial = 'progress.seenTutorial';
+  static const String _kDaily = 'progress.daily.';
+  static const String _kDailyCount = 'progress.dailyCount';
 
   final SharedPreferences _prefs;
   final int _totalLevels;
@@ -66,6 +68,21 @@ class ProgressService extends ChangeNotifier {
 
   bool get seenTutorial => _prefs.getBool(_kSeenTutorial) ?? false;
 
+  bool isDailyCleared(int dayIndex) => _prefs.containsKey('$_kDaily$dayIndex');
+
+  /// How many daily challenges the player has ever cleared.
+  int get dailiesCleared => _prefs.getInt(_kDailyCount) ?? 0;
+
+  /// Records today's challenge. Returns false if it was already recorded, so
+  /// the reward is paid once per day.
+  Future<bool> recordDailyClear(int dayIndex, int moves) async {
+    if (isDailyCleared(dayIndex)) return false;
+    await _prefs.setInt('$_kDaily$dayIndex', moves);
+    await _prefs.setInt(_kDailyCount, dailiesCleared + 1);
+    notifyListeners();
+    return true;
+  }
+
   Future<void> markTutorialSeen() async {
     await _prefs.setBool(_kSeenTutorial, true);
     notifyListeners();
@@ -90,6 +107,10 @@ class ProgressService extends ChangeNotifier {
     }
     _cleared.clear();
     await _prefs.remove(_kSeenTutorial);
+    for (final String k in _prefs.getKeys().where((String k) => k.startsWith(_kDaily))) {
+      await _prefs.remove(k);
+    }
+    await _prefs.remove(_kDailyCount);
     _currentLevelId = 1;
     notifyListeners();
   }

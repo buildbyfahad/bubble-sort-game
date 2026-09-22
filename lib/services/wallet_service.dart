@@ -106,6 +106,11 @@ class WalletService extends ChangeNotifier {
   ///
   /// Deliberately not UTC. "Come back tomorrow" has to mean the player's
   /// tomorrow, or someone west of Greenwich loses a streak they turned up for.
+  /// Today, as days since the epoch in local time. Public because the daily
+  /// challenge keys on the same figure and must agree with the streak about
+  /// when the day turns.
+  int get today => _today;
+
   int get _today {
     final DateTime n = _clock();
     return DateTime(n.year, n.month, n.day).difference(DateTime(1970)).inDays;

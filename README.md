@@ -99,7 +99,7 @@ tools/
 
 assets/
   fonts/                     Sora + Inter (variable)
-  audio/                     20 synthesised cues + a 25s ambient loop
+  audio/                     21 synthesised cues + four 20s music stems
   levels/levels.json         1000 generated levels (~103 KB)
 ```
 
@@ -164,11 +164,53 @@ cycles inside its length, which is what lets it repeat without a seam.
 
 ---
 
+## Three kinds of level
+
+Ball-sort's weakness as a genre is that every level is the same verb. Three
+things a level can be, besides ordinary:
+
+**Hidden balls.** From chapter 4, roughly every third level conceals
+everything below the top ball in a few vessels — drawn as unlit glass with a
+`?`, in no colour at all. Pouring the top off reveals the next. The rules and
+the solver always see the true contents; only the player is in the dark. Undo
+does not re-hide.
+
+**Precision.** Every fifth level from chapter 2 has a hard pour budget of par
+plus two, charged against every pour ever made — undo still works but no
+longer refunds. Run out and the board fails.
+
+**Finales.** The last level of each chapter carries one more colour than the
+rest of it, is generated to out-par everything before it, pays double, has its
+own cue, and drops a cosmetic on first clear.
+
+Alongside those, **flow**: consecutive seals without an undo climb a coin
+multiplier to ×2, shown live on the board.
+
+## The score
+
+Not one loop but four — pad, bass, drums, melody — at 96 BPM over eight bars,
+and the board decides how many are audible. Pad alone on the menu; each
+vessel sealed brings in another layer, so by the last seal the full track is
+playing. Music is feedback for progress, not wallpaper behind it. Kick and
+hats share one file so they cannot drift against each other.
+
 ## The reward loop
 
-Three systems, all local except the last:
+Five systems, all local except the last:
 
-**Coins.** Every clear pays out, scaled by grade — 50 for a flawless line, 30
+**Cosmetics.** Six ball looks and four vessel skins — each a different
+lighting model, never a recolour, so the puzzle reads the same whatever is
+equipped. Three are bought with coins; four are earned by finishing a chapter
+and cannot be bought, which is what makes them worth having. This is what the
+economy was missing: nobody wants a hint, but everyone wants the marble set
+they can't afford yet.
+
+**The daily challenge.** One level per calendar day, the same for everyone,
+hashed from the day so it agrees on every device forever. Pays 120 coins
+once, never advances the road.
+
+
+**Coins.** Every clear pays out, scaled by grade and by flow — 50 for a flawless line, 30
 for a good one, 15 otherwise. A *replay* pays 5 whatever the grade, which is
 the important number: paying nothing makes replaying a solved board feel
 pointless, and paying full rate turns level 1 into an ATM the moment a player
