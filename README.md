@@ -183,6 +183,30 @@ longer refunds. Run out and the board fails.
 rest of it, is generated to out-par everything before it, pays double, has its
 own cue, and drops a cosmetic on first clear.
 
+## Obstacles
+
+Two, staggered so each is introduced alone in its own chapter and they only
+combine from chapter 11. 18% of levels carry one.
+
+**Narrow neck** (chapter 6+) — a brass collar. The vessel pours *one ball at
+a time* instead of the whole matching run. It forbids nothing; it makes the
+move the player has stopped thinking about cost three times as much, which is
+the biggest strategic change available in this genre.
+
+**Colour lock** (chapter 9+) — a tinted rim. The vessel accepts one hue,
+ever. Forces destinations to be planned from the first move.
+
+Both are *pure functions of the board*, and that is not an accident. The
+solver dedups on a board key, so an obstacle that depended on history — "this
+vessel cracks after three pours" — would mean two identical-looking boards
+were no longer the same search node. Dedup breaks, the search space explodes,
+and the guarantee that every one of the thousand levels is solvable goes with
+it. That guarantee is worth more than any single obstacle.
+
+Vessel traits are folded into the key *before* its sort, so two boards
+differing only by which vessel holds a stack still collapse to one node —
+unless the vessels behave differently, in which case they emphatically do not.
+
 Alongside those, **flow**: consecutive seals without an undo climb a coin
 multiplier to ×2, shown live on the board.
 

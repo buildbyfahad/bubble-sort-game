@@ -178,6 +178,28 @@ void main() {
     await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/game_precision.png'));
   });
 
+  renderTest('game — narrow neck', (WidgetTester tester) async {
+    useHandset(tester);
+    final int id = loadCatalog().levels.firstWhere((Level l) => l.hasNarrow).id;
+    await tester.pumpWidget(harness(await buildScope(
+      child: GameScreen(levelId: id),
+      prefs: <String, Object>{'progress.seenTutorial': true},
+    )));
+    await settle(tester, steps: 16);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/game_narrow.png'));
+  });
+
+  renderTest('game — colour-locked vessel', (WidgetTester tester) async {
+    useHandset(tester);
+    final int id = loadCatalog().levels.firstWhere((Level l) => l.hasColourLock).id;
+    await tester.pumpWidget(harness(await buildScope(
+      child: GameScreen(levelId: id),
+      prefs: <String, Object>{'progress.seenTutorial': true},
+    )));
+    await settle(tester, steps: 16);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/game_locked.png'));
+  });
+
   renderTest('board — colour assist on', (WidgetTester tester) async {
     useHandset(tester);
     SharedPreferences.setMockInitialValues(<String, Object>{});

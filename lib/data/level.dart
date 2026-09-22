@@ -35,6 +35,7 @@ class Level {
     required this.tubes,
     this.mode = LevelMode.normal,
     this.hiddenVessels = 0,
+    this.traits = const <int>[],
   });
 
   /// Decodes one entry of `assets/levels/levels.json`.
@@ -50,6 +51,21 @@ class Level {
             tube.split('').map((String c) => int.parse(c, radix: 36)).toList())
         .toList();
 
+    // Per-vessel obstacle, one character each: '.' plain, 'n' narrow neck,
+    // a base-36 digit for a colour lock. Absent means a board with none.
+    final String? v = json['v'] as String?;
+    final List<int> traits = <int>[
+      for (int i = 0; i < tubes.length; i++)
+        if (v == null || i >= v.length)
+          0
+        else if (v[i] == 'n')
+          1 // narrow
+        else if (v[i] == '.')
+          0
+        else
+          (int.parse(v[i], radix: 36) + 1) << 1, // colour lock
+    ];
+
     return Level(
       id: json['i'] as int,
       chapter: json['ch'] as int,
@@ -60,6 +76,7 @@ class Level {
       parIsOptimal: (json['x'] as int) == 1,
       mode: LevelMode.values[(json['m'] as int?) ?? 0],
       hiddenVessels: (json['h'] as int?) ?? 0,
+      traits: traits,
       tubes: tubes,
     );
   }
@@ -98,11 +115,18 @@ class Level {
   /// concealed. Zero for an ordinary level.
   final int hiddenVessels;
 
+  /// Packed per-vessel obstacles; see `BoardState.traits`. Empty when the
+  /// board has none, which is most of them.
+  final List<int> traits;
+
   int get tubeCount => tubes.length;
 
   bool get isBoss => mode == LevelMode.boss;
   bool get isPrecision => mode == LevelMode.precision;
   bool get hasHiddenBalls => hiddenVessels > 0;
+  bool get hasNarrow => traits.any((int t) => (t & 1) != 0);
+  bool get hasColourLock => traits.any((int t) => (t >> 1) != 0);
+  bool get hasObstacles => traits.any((int t) => t != 0);
 
   /// The pour budget on a precision level. Par plus a little slack: par on a
   /// beam-found board is close to optimal, and demanding it exactly would make

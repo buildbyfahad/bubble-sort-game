@@ -236,6 +236,8 @@ class BoardView extends StatelessWidget {
                       hiddenBelow: state.hiddenBelow[i],
                       ballStyle: ballStyle,
                       skin: vesselStyle,
+                      narrow: state.isNarrow(i),
+                      lockedHue: state.lockedHue(i),
                       hinted: controller.hint?.to == i,
                       // Finished vessels step back so attention stays on the
                       // unsolved ones, without them disappearing.

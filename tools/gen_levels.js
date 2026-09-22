@@ -94,11 +94,40 @@ function rng(seed) {
 // ------------------------------------------------------------ state helpers
 const clone = (s) => s.map((t) => t.slice());
 
+/**
+ * Per-vessel obstacles for the board currently being generated or solved.
+ *
+ * Module-level rather than threaded through every function because the search
+ * is recursive and hot, and a board's traits are fixed for its whole lifetime.
+ * `withTraits` is the only way to set it, and it always restores — a leaked
+ * trait array would silently solve the *next* board under the wrong rules.
+ *
+ * Packed exactly as lib/engine/board_state.dart packs them:
+ *   bit 0     narrow neck
+ *   bits 1..  colour lock as hue + 1
+ */
+let TRAITS = null;
+
+function withTraits(traits, fn) {
+  const prev = TRAITS;
+  TRAITS = traits;
+  try {
+    return fn();
+  } finally {
+    TRAITS = prev;
+  }
+}
+
+const traitAt = (i) => (TRAITS && TRAITS[i]) || 0;
+const isNarrow = (i) => (traitAt(i) & 1) !== 0;
+const lockedHue = (i) => (traitAt(i) >> 1) === 0 ? null : (traitAt(i) >> 1) - 1;
+
 function key(s) {
   // Order-independent: two boards differing only in which vessel holds which
-  // stack are the same search node.
+  // stack are the same search node — but only while the vessels themselves
+  // behave alike, so the trait is folded in before the sort.
   const parts = new Array(s.length);
-  for (let i = 0; i < s.length; i++) parts[i] = s[i].join('.');
+  for (let i = 0; i < s.length; i++) parts[i] = traitAt(i) + ':' + s[i].join('.');
   parts.sort();
   return parts.join('|');
 }
@@ -135,6 +164,17 @@ function runCount(s) {
  */
 const lowerBound = (s, colors) => Math.max(0, runCount(s) - colors);
 
+/**
+ * True while any vessel on the board pours one ball at a time.
+ *
+ * The A* bound above assumes a pour can carry a whole run. A narrow neck
+ * breaks that assumption — the bound stays *admissible* (it still never
+ * over-estimates) so A* remains correct, but it becomes much weaker, and the
+ * exact search gets correspondingly slower. That is why boards with a narrow
+ * neck are given a larger node budget below.
+ */
+const hasNarrow = () => TRAITS !== null && TRAITS.some((t) => (t & 1) !== 0);
+
 function legalMoves(s, k) {
   const out = [];
   for (let i = 0; i < s.length; i++) {
@@ -150,8 +190,12 @@ function legalMoves(s, k) {
       if (i === j) continue;
       const to = s[j];
       if (to.length === k) continue;
+      const lock = lockedHue(j);
+      if (lock !== null && lock !== c) continue;
       if (to.length === 0) {
-        if (pure) continue; // pointless re-parking
+        // Pointless re-parking — unless the destination is locked to this
+        // hue, where it is the only place the colour can ever be sealed.
+        if (pure && lock !== c) continue;
         out.push((i << 8) | j);
       } else if (to[to.length - 1] === c) {
         out.push((i << 8) | j);
@@ -166,7 +210,7 @@ function apply(s, mv, k) {
   const j = mv & 255;
   const n = clone(s);
   const c = n[i][n[i].length - 1];
-  let room = k - n[j].length;
+  let room = isNarrow(i) ? 1 : k - n[j].length;
   while (n[i].length && n[i][n[i].length - 1] === c && room > 0) {
     n[j].push(n[i].pop());
     room--;
@@ -178,6 +222,9 @@ function apply(s, mv, k) {
 
 /** Exact optimum via A*. Returns null if it exceeds the node budget. */
 function solveExact(start, k, colors, nodeCap) {
+  // The A* bound is much weaker with a narrow neck on the board, so the exact
+  // search needs more room before it gives up and falls back to the beam.
+  if (hasNarrow()) nodeCap *= 4;
   if (isDone(start, k)) return 0;
 
   // Buckets keyed by f = g + h. h is small and integral, so an array of
@@ -250,6 +297,100 @@ function solve(start, k, colors) {
     if (beam !== null) return { par: beam, exact: false };
   }
   return null;
+}
+
+// ---------------------------------------------------------------- obstacles
+
+/**
+ * Which obstacle, if any, a level carries.
+ *
+ * Staggered deliberately: each is introduced alone, in its own chapter, and
+ * only combined much later. Two new rules in one chapter is how a player
+ * stops learning either of them. Ordinary levels stay the large majority
+ * throughout — an obstacle is a change of question, and a change of question
+ * every single level is just noise.
+ *
+ *   ch 6+   narrow neck
+ *   ch 9+   colour lock
+ *   ch 11+  either, and occasionally both on one board
+ *
+ * Precision levels and finales are exempt: a pour budget plus a narrow neck
+ * is two rules fighting, and a finale should be the chapter's own game at its
+ * hardest rather than a different one.
+ */
+function planTraits(ci, pos, count, tubeCount, colors, k, mode, rand, empties) {
+  const traits = new Array(tubeCount).fill(0);
+  if (mode !== 0) return traits;
+
+  const chapter = ci + 1;
+  const canNarrow = chapter >= 6;
+  const canLock = chapter >= 9;
+  if (!canNarrow && !canLock) return traits;
+
+  // Roughly one level in four inside a chapter that has obstacles at all.
+  if (pos % 4 !== 2) return traits;
+
+  const both = chapter >= 11 && rand() < 0.25;
+  const wantNarrow = canNarrow && (!canLock || both || rand() < 0.5);
+  const wantLock = canLock && (both || !wantNarrow);
+
+  // How many vessels are affected. Kept well under the spare count so the
+  // board never loses all of its working room at once.
+  const n = 1 + (chapter >= 14 && rand() < 0.5 ? 1 : 0);
+
+  const used = new Set();
+  const pick = (max) => {
+    for (let tries = 0; tries < 30; tries++) {
+      const i = (rand() * max) | 0;
+      if (!used.has(i)) { used.add(i); return i; }
+    }
+    return -1;
+  };
+
+  if (wantNarrow) {
+    // A filled vessel: narrow only bites on the way out, so it must have
+    // something in it in the solved state to matter.
+    for (let c = 0; c < n; c++) {
+      const i = pick(colors);
+      if (i >= 0) traits[i] |= 1;
+    }
+  }
+  if (wantLock) {
+    for (let c = 0; c < n; c++) {
+      // Locking a *spare* is the sharper version — it takes away parking
+      // space rather than merely constraining a vessel that already holds
+      // that colour in the solution.
+      //
+      // But only when there is more than one spare. Locking the single spare
+      // on a one-spare board leaves the player no unrestricted working room
+      // at all, and at twelve colours that is not hard, it is impossible —
+      // chapter 25 could not produce a solvable board until this guard
+      // existed.
+      const mayLockSpare = empties >= 2;
+      const spare = colors + ((rand() * (tubeCount - colors)) | 0);
+      const target = mayLockSpare && rand() < 0.65 ? spare : pick(colors);
+      if (target < 0 || used.has(target) && target !== spare) continue;
+      used.add(target);
+      // In the solved state vessel `c` holds colour `c`; a spare holds
+      // nothing, so it may be locked to any hue.
+      const hue = target < colors ? target : (rand() * colors) | 0;
+      traits[target] = (traits[target] & 1) | ((hue + 1) << 1);
+    }
+  }
+  return traits;
+}
+
+/** The compact per-vessel encoding written into levels.json. */
+function encodeTraits(traits) {
+  let out = '';
+  let any = false;
+  for (const t of traits) {
+    if (t === 0) { out += '.'; continue; }
+    any = true;
+    if (t & 1) { out += 'n'; continue; }
+    out += (((t >> 1) - 1)).toString(36);
+  }
+  return any ? out : null;
 }
 
 // -------------------------------------------------------------- generation
@@ -326,6 +467,7 @@ const levels = [];
 const chapters = [];
 let exactCount = 0;
 let rejected = 0;
+let droppedObstacles = 0;
 let id = 0;
 
 for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
@@ -369,6 +511,12 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
             ? Math.max(chapterMaxPar, Math.round(colors * 2.0))
             : Math.round(colors * (1.15 + 0.85 * t));
 
+    // Planned before the scramble so the solve runs under the same rules the
+    // player will.
+    const traits = planTraits(
+        ci, n, count, colors + spec.empties, colors, spec.k,
+        isBoss ? 2 : (ci >= 1 && (id + 1) % 5 === 0 ? 1 : 0), rand, spec.empties);
+
     let accepted = null;
     // For a finale the floor is a target, not a gate: at twelve colours and
     // capacity five the search space is deep enough that a board over the
@@ -376,16 +524,21 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     let bestSeen = null;
     for (let attempt = 0; attempt < (isBoss ? 4000 : 800) && !accepted; attempt++) {
       const jitter = Math.round((rand() - 0.5) * 6);
-      const cand = build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand);
+      const cand = withTraits(
+          traits,
+          () => build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand));
       if (!cand) continue;
       if (isDone(cand, spec.k)) continue;
       if (mixedness(cand) < colors + Math.min(colors, 3)) continue;
 
       // The acceptance test *is* the solve. A board nothing can finish never
       // reaches a player.
-      const solved = solve(cand, spec.k, colors);
+      const solved = withTraits(traits, () => solve(cand, spec.k, colors));
       if (!solved) { rejected++; continue; }
-      const found = { board: cand, colors, par: solved.par, exact: solved.exact, boss: isBoss };
+      const found = {
+        board: cand, colors, par: solved.par, exact: solved.exact,
+        boss: isBoss, traits,
+      };
       if (solved.par < parFloor) {
         if (isBoss && (!bestSeen || found.par > bestSeen.par)) bestSeen = found;
         rejected++;
@@ -394,6 +547,29 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       accepted = found;
     }
     if (!accepted && isBoss && bestSeen) accepted = bestSeen;
+
+    // An obstacle that cannot be made to work on this board is dropped rather
+    // than fatal. The alternative is a generator that fails outright because
+    // one slot in one chapter got an unlucky combination — the level is worth
+    // more than the obstacle.
+    if (!accepted && traits.some((t) => t !== 0)) {
+      const plain = new Array(traits.length).fill(0);
+      for (let attempt = 0; attempt < 800 && !accepted; attempt++) {
+        const jitter = Math.round((rand() - 0.5) * 6);
+        const cand = withTraits(
+            plain,
+            () => build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand));
+        if (!cand || isDone(cand, spec.k)) continue;
+        if (mixedness(cand) < colors + Math.min(colors, 3)) continue;
+        const solved = withTraits(plain, () => solve(cand, spec.k, colors));
+        if (!solved || solved.par < parFloor) { rejected++; continue; }
+        accepted = {
+          board: cand, colors, par: solved.par, exact: solved.exact,
+          boss: isBoss, traits: plain,
+        };
+        droppedObstacles++;
+      }
+    }
     if (!accepted) {
       console.error(`chapter ${ci + 1}: no solvable board for slot ${n}`);
       process.exit(1);
@@ -412,7 +588,12 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     if (c.exact) exactCount++;
     // Vessels ordered filled-first so the board reads as a solid block with
     // the spares grouped at the end.
-    const ordered = c.board.slice().sort((a, b) => b.length - a.length);
+    // Vessels are reordered filled-first for presentation, so their traits
+    // have to travel with them — sorting the board and leaving the trait
+    // array behind would silently move every obstacle to a different vessel.
+    const order = c.board.map((t, i) => i).sort((x, y) => c.board[y].length - c.board[x].length);
+    const ordered = order.map((i) => c.board[i]);
+    c.traits = order.map((i) => c.traits[i]);
 
     // Mode. 2 = boss (the chapter finale), 1 = precision (a hard pour budget,
     // every fifth level from chapter 2), 0 = ordinary.
@@ -439,6 +620,7 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       x: c.exact ? 1 : 0,
       m: mode,
       h: hidden,
+      ...(encodeTraits(c.traits) ? { v: encodeTraits(c.traits) } : {}),
       t: ordered.map((tube) => tube.map((v) => v.toString(36)).join('')).join(','),
     });
   }
@@ -461,6 +643,7 @@ const bytes = fs.statSync(OUT).size;
 console.error(
   `\n${levels.length} levels, ${chapters.length} chapters, ` +
     `${exactCount} with a proven-optimal par ` +
+    `(${droppedObstacles} obstacles dropped as unsolvable) ` +
     `(${Math.round((exactCount / levels.length) * 100)}%), ` +
     `${rejected} candidates discarded as unsolvable  ` +
     `-> ${OUT} (${(bytes / 1024).toFixed(0)} KB)`,

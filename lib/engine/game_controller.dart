@@ -31,7 +31,8 @@ class GameController extends ChangeNotifier {
     required HapticService haptics,
   })  : _audio = audio,
         _haptics = haptics,
-        _state = BoardState.withHidden(level.tubes, level.capacity, level.hiddenVessels);
+        _state = BoardState.withHidden(level.tubes, level.capacity, level.hiddenVessels,
+            traits: level.traits);
 
   final Level level;
   final AudioService _audio;
@@ -387,7 +388,8 @@ class GameController extends ChangeNotifier {
     _flightTimer?.cancel();
     _sealTimer?.cancel();
     _cancelLandCues();
-    _state = BoardState.withHidden(level.tubes, level.capacity, level.hiddenVessels);
+    _state = BoardState.withHidden(level.tubes, level.capacity, level.hiddenVessels,
+            traits: level.traits);
     _history.clear();
     _totalPours = 0;
     _flow = 0;

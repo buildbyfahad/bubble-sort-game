@@ -29,23 +29,40 @@ class Pour {
 /// what makes undo a one-liner and animation state easy to reason about.
 @immutable
 class BoardState {
-  BoardState(List<List<int>> tubes, this.capacity, {List<int>? hiddenBelow})
-      : tubes = List<List<int>>.unmodifiable(
+  BoardState(
+    List<List<int>> tubes,
+    this.capacity, {
+    List<int>? hiddenBelow,
+    List<int>? traits,
+  })  : tubes = List<List<int>>.unmodifiable(
           tubes.map((List<int> t) => List<int>.unmodifiable(t)),
         ),
         hiddenBelow = List<int>.unmodifiable(
           hiddenBelow ?? List<int>.filled(tubes.length, 0),
-        );
+        ),
+        // Normalised to one entry per vessel rather than taken as given.
+        // A board with no obstacles carries an *empty* trait list — that is
+        // the common case and the cheapest thing to store — so indexing the
+        // caller's list directly would range-error on every ordinary level.
+        traits = List<int>.unmodifiable(<int>[
+          for (int i = 0; i < tubes.length; i++)
+            (traits != null && i < traits.length) ? traits[i] : 0,
+        ]);
 
   /// A board with the first [hiddenVessels] vessels concealed below the top.
-  factory BoardState.withHidden(List<List<int>> tubes, int capacity, int hiddenVessels) {
+  factory BoardState.withHidden(
+    List<List<int>> tubes,
+    int capacity,
+    int hiddenVessels, {
+    List<int>? traits,
+  }) {
     final List<int> hidden = List<int>.filled(tubes.length, 0);
     for (int i = 0; i < hiddenVessels && i < tubes.length; i++) {
       // Everything but the ball at the mouth. A vessel with one ball hides
       // nothing.
       hidden[i] = tubes[i].isEmpty ? 0 : tubes[i].length - 1;
     }
-    return BoardState(tubes, capacity, hiddenBelow: hidden);
+    return BoardState(tubes, capacity, hiddenBelow: hidden, traits: traits);
   }
 
   /// Bottom-up contents per vessel; values are hue indices.
@@ -68,6 +85,31 @@ class BoardState {
   bool isHidden(int i, int slot) => slot < hiddenBelow[i];
 
   bool get hasHidden => hiddenBelow.any((int n) => n > 0);
+
+  /// Per-vessel obstacle, packed into one int so it crosses the isolate
+  /// boundary as plain data.
+  ///
+  ///   bit 0      narrow neck — pours one ball at a time, not a whole run
+  ///   bits 1..   colour lock, as `hue + 1`; zero means unlocked
+  ///
+  /// Packed rather than held as two lists because the solver keys on it on
+  /// its hot path, and an int compares and concatenates far more cheaply than
+  /// a pair of nullable fields.
+  final List<int> traits;
+
+  static int packTrait({bool narrow = false, int? lockedHue}) =>
+      (narrow ? 1 : 0) | ((lockedHue == null ? 0 : lockedHue + 1) << 1);
+
+  static bool traitNarrow(int t) => (t & 1) != 0;
+  static int? traitLockedHue(int t) => (t >> 1) == 0 ? null : (t >> 1) - 1;
+
+  /// This vessel empties one ball at a time.
+  bool isNarrow(int i) => traitNarrow(traits[i]);
+
+  /// The only hue this vessel will accept, or null.
+  int? lockedHue(int i) => traitLockedHue(traits[i]);
+
+  bool get hasObstacles => traits.any((int t) => t != 0);
 
   int get tubeCount => tubes.length;
 
@@ -120,12 +162,21 @@ class BoardState {
     if (tubes[from].isEmpty) return false;
     if (isSealed(from)) return false;
     if (isFull(to)) return false;
+
+    final int hue = tubes[from].last;
+
+    // A colour-locked vessel takes one hue and nothing else, ever.
+    final int? lock = lockedHue(to);
+    if (lock != null && lock != hue) return false;
+
     if (tubes[to].isEmpty) {
       // Moving a single-hue stack into an empty vessel achieves nothing and
-      // only pads the move counter, so the rules forbid it outright.
-      return !isPure(from);
+      // only pads the move counter, so the rules forbid it outright — unless
+      // the destination is locked to that hue, in which case it is the only
+      // place the colour can ever be sealed and the move is the whole point.
+      return !isPure(from) || lock == hue;
     }
-    return tubes[to].last == tubes[from].last;
+    return tubes[to].last == hue;
   }
 
   /// Applies a pour that [canPour] has already approved.
@@ -133,7 +184,10 @@ class BoardState {
     assert(canPour(from, to));
     final List<List<int>> next = _mutableCopy();
     final int hue = next[from].last;
-    final int room = capacity - next[to].length;
+    // A narrow neck lets exactly one ball past, however long the run is. This
+    // is the whole obstacle: it does not forbid anything, it makes the move
+    // the player has stopped thinking about cost three times as much.
+    final int room = isNarrow(from) ? 1 : capacity - next[to].length;
     int moved = 0;
     while (next[from].isNotEmpty && next[from].last == hue && moved < room) {
       next[to].add(next[from].removeLast());
@@ -145,7 +199,7 @@ class BoardState {
     if (hidden[from] > remaining - 1) hidden[from] = remaining > 0 ? remaining - 1 : 0;
 
     return (
-      BoardState(next, capacity, hiddenBelow: hidden),
+      BoardState(next, capacity, hiddenBelow: hidden, traits: traits),
       Pour(from: from, to: to, count: moved, hue: hue),
     );
   }
@@ -157,7 +211,7 @@ class BoardState {
       next[p.from].add(next[p.to].removeLast());
     }
     // Concealment carries over unchanged — see [hiddenBelow].
-    return BoardState(next, capacity, hiddenBelow: hiddenBelow);
+    return BoardState(next, capacity, hiddenBelow: hiddenBelow, traits: traits);
   }
 
   /// True when no legal pour exists — a dead end the player can only leave via
@@ -182,9 +236,15 @@ class BoardState {
 
   /// Order-independent identity, so two boards that differ only by which
   /// vessel holds which stack collapse to one search node.
+  ///
+  /// Each vessel's trait is folded in *before* the sort. Without that, two
+  /// boards where a stack sits in a plain vessel and in a narrow one would
+  /// collapse to the same node — and the search would answer a question the
+  /// player was not asked.
   String canonicalKey() {
-    final List<String> parts =
-        tubes.map((List<int> t) => t.join(',')).toList(growable: false)..sort();
+    final List<String> parts = <String>[
+      for (int i = 0; i < tubes.length; i++) '${traits[i]}:${tubes[i].join(',')}',
+    ]..sort();
     return parts.join('|');
   }
 

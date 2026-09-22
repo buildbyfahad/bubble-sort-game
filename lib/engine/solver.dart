@@ -7,9 +7,15 @@ import 'board_state.dart';
 /// Payload for the isolate hop — plain data only.
 @immutable
 class SolverRequest {
-  const SolverRequest(this.tubes, this.capacity);
+  const SolverRequest(this.tubes, this.capacity, [this.traits = const <int>[]]);
   final List<List<int>> tubes;
   final int capacity;
+
+  /// Packed per-vessel obstacles; see [BoardState.traits]. Empty means a board
+  /// with none, which is the common case and costs nothing to check.
+  final List<int> traits;
+
+  int traitAt(int i) => i < traits.length ? traits[i] : 0;
 }
 
 /// The first move of a winning line, plus how long that line is.
@@ -61,12 +67,24 @@ class Solver {
     return true;
   }
 
-  static String _key(List<List<int>> tubes) {
-    final List<String> parts = tubes.map((List<int> t) => t.join(',')).toList()..sort();
+  /// Vessel traits are folded in before the sort. Two boards that differ only
+  /// by which vessel a stack sits in are the same node — unless the vessels
+  /// behave differently, in which case they are emphatically not.
+  static String _key(List<List<int>> tubes, List<int> traits) {
+    final List<String> parts = <String>[
+      for (int i = 0; i < tubes.length; i++)
+        '${i < traits.length ? traits[i] : 0}:${tubes[i].join(',')}',
+    ]..sort();
     return parts.join('|');
   }
 
-  static List<List<int>> _legalMoves(List<List<int>> tubes, int capacity) {
+  /// Must agree with [BoardState.canPour] exactly. A solver that is allowed a
+  /// move the player is not will happily certify an unsolvable board.
+  static List<List<int>> _legalMoves(
+    List<List<int>> tubes,
+    int capacity,
+    List<int> traits,
+  ) {
     final List<List<int>> out = <List<int>>[];
     for (int i = 0; i < tubes.length; i++) {
       final List<int> from = tubes[i];
@@ -84,8 +102,11 @@ class Solver {
         if (i == j) continue;
         final List<int> to = tubes[j];
         if (to.length == capacity) continue;
+        final int? lock =
+            BoardState.traitLockedHue(j < traits.length ? traits[j] : 0);
+        if (lock != null && lock != c) continue;
         if (to.isEmpty) {
-          if (pure) continue;
+          if (pure && lock != c) continue;
           out.add(<int>[i, j]);
         } else if (to.last == c) {
           out.add(<int>[i, j]);
@@ -95,10 +116,18 @@ class Solver {
     return out;
   }
 
-  static List<List<int>> _apply(List<List<int>> tubes, int from, int to, int capacity) {
+  static List<List<int>> _apply(
+    List<List<int>> tubes,
+    int from,
+    int to,
+    int capacity,
+    List<int> traits,
+  ) {
     final List<List<int>> n = tubes.map((List<int> t) => List<int>.of(t)).toList();
     final int c = n[from].last;
-    int room = capacity - n[to].length;
+    final bool narrow =
+        BoardState.traitNarrow(from < traits.length ? traits[from] : 0);
+    int room = narrow ? 1 : capacity - n[to].length;
     while (n[from].isNotEmpty && n[from].last == c && room > 0) {
       n[to].add(n[from].removeLast());
       room--;
@@ -114,6 +143,7 @@ class Solver {
   static SolverHint? solve(SolverRequest req) {
     final List<List<int>> start = req.tubes.map((List<int> t) => List<int>.of(t)).toList();
     final int cap = req.capacity;
+    final List<int> traits = req.traits;
     if (_solved(start, cap)) return null;
 
     // Node id -> (parent id, first-move from, first-move to, depth).
@@ -122,7 +152,7 @@ class Solver {
     final List<int> firstTo = <int>[-1];
     final List<int> depth = <int>[0];
 
-    final HashSet<String> seen = HashSet<String>()..add(_key(start));
+    final HashSet<String> seen = HashSet<String>()..add(_key(start, traits));
 
     // Priority queue keyed by f = depth + 2*heuristic. Weighting the heuristic
     // makes the search dive for a solution rather than sweep for the shortest
@@ -135,9 +165,9 @@ class Solver {
       expanded++;
       final List<List<int>> cur = states[id];
 
-      for (final List<int> m in _legalMoves(cur, cap)) {
-        final List<List<int>> next = _apply(cur, m[0], m[1], cap);
-        final String k = _key(next);
+      for (final List<int> m in _legalMoves(cur, cap, traits)) {
+        final List<List<int>> next = _apply(cur, m[0], m[1], cap, traits);
+        final String k = _key(next, traits);
         if (!seen.add(k)) continue;
 
         final int childId = states.length;
@@ -166,7 +196,7 @@ class Solver {
   static Future<SolverHint?> findHint(BoardState state) {
     return compute<SolverRequest, SolverHint?>(
       solve,
-      SolverRequest(state.toRaw(), state.capacity),
+      SolverRequest(state.toRaw(), state.capacity, state.traits),
     );
   }
 }

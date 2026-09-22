@@ -94,7 +94,15 @@ class Tube extends StatefulWidget {
     this.hiddenBelow = 0,
     this.ballStyle = BallStyle.classic,
     this.skin = VesselStyle.glass,
+    this.narrow = false,
+    this.lockedHue,
   });
+
+  /// This vessel pours one ball at a time. Drawn as a brass collar.
+  final bool narrow;
+
+  /// This vessel accepts only one hue. Drawn as a tinted rim and a wash.
+  final int? lockedHue;
 
   final BallStyle ballStyle;
   final VesselStyle skin;
@@ -256,6 +264,8 @@ class _TubeState extends State<Tube> with TickerProviderStateMixin {
                         painter: _VesselBackPainter(
                           metrics: m,
                           skin: widget.skin,
+                          narrow: widget.narrow,
+                          lockedHue: widget.lockedHue,
                           selection: sel,
                           seal: sealT,
                           sealed: widget.sealed,
@@ -402,6 +412,8 @@ class _VesselBackPainter extends CustomPainter {
   _VesselBackPainter({
     required this.metrics,
     required this.skin,
+    required this.narrow,
+    required this.lockedHue,
     required this.selection,
     required this.seal,
     required this.sealed,
@@ -412,6 +424,8 @@ class _VesselBackPainter extends CustomPainter {
 
   final TubeMetrics metrics;
   final VesselStyle skin;
+  final bool narrow;
+  final int? lockedHue;
   final double selection;
   final double seal;
   final bool sealed;
@@ -566,6 +580,88 @@ class _VesselBackPainter extends CustomPainter {
         )!,
     );
 
+    // --- colour lock ------------------------------------------------------
+    //
+    // A band of the hue around the inside of the mouth, plus a wash down the
+    // body. Not a padlock icon: the vessel is not *closed*, it is *fussy*,
+    // and the thing the player needs to know is which colour it wants — so
+    // the mark is the colour itself.
+    if (lockedHue != null) {
+      final BubbleHue lh = DS.hues[lockedHue!];
+      canvas.drawRRect(
+        body,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(0, 0),
+            Offset(0, size.height),
+            <Color>[
+              lh.base.withValues(alpha: 0.20 * (1 - dim * 0.5)),
+              lh.base.withValues(alpha: 0.02),
+            ],
+          ),
+      );
+      // The band itself, inside the mouth.
+      canvas.save();
+      canvas.clipRRect(body);
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, w, size.height * 0.055),
+        Paint()..color = lh.base.withValues(alpha: 0.85 * (1 - dim * 0.4)),
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(0, size.height * 0.055, w, 1.2),
+        Paint()..color = lh.light.withValues(alpha: 0.5),
+      );
+      canvas.restore();
+    }
+
+    // --- narrow neck ------------------------------------------------------
+    //
+    // A brass collar pinching the mouth. Drawn as an actual constriction
+    // rather than a badge, because the player has to read "things come out of
+    // here slowly" from the shape in the half-second before they tap.
+    if (narrow) {
+      final double neckY = size.height * 0.10;
+      final double pinch = w * 0.30;
+      const Color brass = Color(0xFFE8B86A);
+
+      canvas.save();
+      canvas.clipRRect(body);
+      // The two shoulders of the constriction.
+      for (final bool left in <bool>[true, false]) {
+        final Path p = Path();
+        final double x0 = left ? 0 : w;
+        final double dir = left ? 1 : -1;
+        p
+          ..moveTo(x0, neckY - w * 0.22)
+          ..quadraticBezierTo(x0 + dir * pinch * 0.6, neckY, x0 + dir * pinch, neckY)
+          ..lineTo(x0 + dir * pinch, neckY + w * 0.16)
+          ..quadraticBezierTo(
+              x0 + dir * pinch * 0.5, neckY + w * 0.10, x0, neckY + w * 0.30)
+          ..close();
+        canvas.drawPath(
+          p,
+          Paint()
+            ..shader = ui.Gradient.linear(
+              Offset(x0, neckY),
+              Offset(x0 + dir * pinch, neckY),
+              <Color>[
+                brass.withValues(alpha: 0.85 * (1 - dim * 0.45)),
+                brass.withValues(alpha: 0.40 * (1 - dim * 0.45)),
+              ],
+            ),
+        );
+      }
+      canvas.restore();
+      // A hairline across the collar so it reads as one band, not two lumps.
+      canvas.drawLine(
+        Offset(w * 0.06, neckY + w * 0.02),
+        Offset(w * 0.94, neckY + w * 0.02),
+        Paint()
+          ..strokeWidth = 1.0
+          ..color = brass.withValues(alpha: 0.30 * (1 - dim * 0.5)),
+      );
+    }
+
     // Hint ring — a slow gold pulse on the vessel the solver is pointing at.
     if (hinted) {
       canvas.drawRRect(
@@ -581,6 +677,8 @@ class _VesselBackPainter extends CustomPainter {
   @override
   bool shouldRepaint(_VesselBackPainter old) =>
       old.skin != skin ||
+      old.narrow != narrow ||
+      old.lockedHue != lockedHue ||
       old.selection != selection ||
       old.seal != seal ||
       old.sealed != sealed ||

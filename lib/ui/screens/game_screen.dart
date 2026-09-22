@@ -451,6 +451,24 @@ class _GameScreenState extends State<GameScreen> {
         style: Type.bodyStrong.copyWith(color: DS.hues[0].base, fontSize: 13.5),
       );
     }
+    // An obstacle is taught the first time it appears and never again: the
+    // status line already exists, so it costs no screen and nothing to
+    // dismiss. A modal to explain a brass collar would be worse than the
+    // collar being briefly puzzling.
+    if (_controller.moves == 0 && level.hasObstacles) {
+      final String teach = level.hasNarrow && level.hasColourLock
+          ? 'Narrow necks pour one ball · tinted vessels take one colour'
+          : (level.hasNarrow
+              ? 'A narrow neck lets one ball out at a time'
+              : 'A tinted vessel accepts only that colour');
+      return Text(
+        teach,
+        key: const ValueKey<String>('obstacle'),
+        textAlign: TextAlign.center,
+        style: Type.bodyStrong.copyWith(color: DS.gold, fontSize: 12.5),
+      );
+    }
+
     final int? left = _controller.poursLeft;
     if (left != null) {
       // Precision: the budget is the whole point of the level, so it owns the
