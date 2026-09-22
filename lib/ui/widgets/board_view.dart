@@ -223,6 +223,7 @@ class BoardView extends StatelessWidget {
                       // Vessel index and level id together, so no two vessels on
                       // a board crack alike and no level is a repeat of the last.
                       fractureSeed: i * 31 + controller.level.id * 7,
+                      hiddenBelow: state.hiddenBelow[i],
                       hinted: controller.hint?.to == i,
                       // Finished vessels step back so attention stays on the
                       // unsolved ones, without them disappearing.

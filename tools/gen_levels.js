@@ -336,7 +336,13 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
 
   for (let n = 0; n < count; n++) {
     const t = count === 1 ? 0 : n / (count - 1);
-    const colors = Math.round(spec.colors[0] + (spec.colors[1] - spec.colors[0]) * t);
+    const isBoss = n === count - 1;
+    // The finale carries one more colour than the rest of its chapter, so it
+    // sorts to the end on its own and is a board the chapter has not shown
+    // before. Capped at the palette.
+    const colors = isBoss
+        ? Math.min(12, spec.colors[1] + 1)
+        : Math.round(spec.colors[0] + (spec.colors[1] - spec.colors[0]) * t);
 
     // Scramble depth ramps across the chapter, so difficulty rises inside a
     // chapter as well as between chapters.
@@ -353,12 +359,22 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     // is now an acceptance criterion rather than only a label. The first few
     // levels of chapter 1 are exempt — they genuinely should be solvable in
     // three or four pours.
+    // The finale must out-par everything before it in the chapter, so that
+    // "last" and "hardest" are the same level. Generated last in the loop, so
+    // every other candidate's par is known by now.
+    const chapterMaxPar = candidates.reduce((m, c) => Math.max(m, c.par), 0);
     const parFloor = ci === 0 && n < 4
         ? 0
-        : Math.round(colors * (1.15 + 0.85 * t));
+        : isBoss
+            ? Math.max(chapterMaxPar, Math.round(colors * 2.0))
+            : Math.round(colors * (1.15 + 0.85 * t));
 
     let accepted = null;
-    for (let attempt = 0; attempt < 800 && !accepted; attempt++) {
+    // For a finale the floor is a target, not a gate: at twelve colours and
+    // capacity five the search space is deep enough that a board over the
+    // chapter's max par may simply not turn up. Keep the hardest one seen.
+    let bestSeen = null;
+    for (let attempt = 0; attempt < (isBoss ? 4000 : 800) && !accepted; attempt++) {
       const jitter = Math.round((rand() - 0.5) * 6);
       const cand = build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand);
       if (!cand) continue;
@@ -369,9 +385,15 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       // reaches a player.
       const solved = solve(cand, spec.k, colors);
       if (!solved) { rejected++; continue; }
-      if (solved.par < parFloor) { rejected++; continue; }
-      accepted = { board: cand, colors, par: solved.par, exact: solved.exact };
+      const found = { board: cand, colors, par: solved.par, exact: solved.exact, boss: isBoss };
+      if (solved.par < parFloor) {
+        if (isBoss && (!bestSeen || found.par > bestSeen.par)) bestSeen = found;
+        rejected++;
+        continue;
+      }
+      accepted = found;
     }
+    if (!accepted && isBoss && bestSeen) accepted = bestSeen;
     if (!accepted) {
       console.error(`chapter ${ci + 1}: no solvable board for slot ${n}`);
       process.exit(1);
@@ -381,15 +403,32 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
 
   // Order the chapter by its own difficulty, so the ramp inside a chapter is
   // smooth regardless of how the scrambles happened to land.
-  candidates.sort((a, b) => a.colors - b.colors || a.par - b.par);
+  candidates.sort((a, b) => (a.boss - b.boss) || a.colors - b.colors || a.par - b.par);
 
   const first = id + 1;
-  for (const c of candidates) {
+  for (let pos = 0; pos < candidates.length; pos++) {
+    const c = candidates[pos];
     id++;
     if (c.exact) exactCount++;
     // Vessels ordered filled-first so the board reads as a solid block with
     // the spares grouped at the end.
     const ordered = c.board.slice().sort((a, b) => b.length - a.length);
+
+    // Mode. 2 = boss (the chapter finale), 1 = precision (a hard pour budget,
+    // every fifth level from chapter 2), 0 = ordinary.
+    const mode = c.boss ? 2 : (ci >= 1 && id % 5 === 0 ? 1 : 0);
+
+    // Hidden vessels: from chapter 4, roughly every third level conceals
+    // everything below the top ball in a few of its vessels. The count grows
+    // slowly with the chapter and never covers every filled vessel, so there
+    // is always something to reason from. Precision levels stay fully
+    // visible — a pour budget and hidden information together is cruelty,
+    // not difficulty.
+    let hidden = 0;
+    if (ci >= 3 && mode !== 1 && pos % 3 === 1) {
+      hidden = Math.min(c.colors - 1, 2 + Math.floor(ci / 6));
+    }
+
     levels.push({
       i: id,
       ch: ci + 1,
@@ -398,6 +437,8 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       k: spec.k,
       p: c.par,
       x: c.exact ? 1 : 0,
+      m: mode,
+      h: hidden,
       t: ordered.map((tube) => tube.map((v) => v.toString(36)).join('')).join(','),
     });
   }

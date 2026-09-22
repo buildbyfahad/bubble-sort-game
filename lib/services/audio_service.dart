@@ -57,24 +57,42 @@ class AudioService {
     'complete_7': 1,
     'complete_8': 1,
     'win': 1,
+    'boss_win': 1,
   };
 
-  static const String _musicAsset = 'audio/music_loop.wav';
+  /// The score, as stems. See `tools/gen_audio.py` for why it is four loops
+  /// and not one: the game decides how many are audible.
+  static const List<String> _stems = <String>['pad', 'bass', 'drums', 'melody'];
 
-  /// Music sits well under the cues. It is scenery; the moment a player can
-  /// hum it, it is competing with the puzzle.
-  ///
-  /// Raised from 0.20 after play-testing: at that level it was inaudible over
-  /// a phone speaker in a normally noisy room, which is the same as not
-  /// shipping it. It still sits a long way under every board cue.
-  static const double _musicVolume = 0.34;
+  /// Full-mix level of each stem. Balanced by ear against the board cues so
+  /// that at full intensity the music sits under a landing plop, never over.
+  static const Map<String, double> _stemLevel = <String, double>{
+    'pad': 0.34,
+    'bass': 0.40,
+    'drums': 0.30,
+    'melody': 0.52,
+  };
+
+  /// Intensity at which each stem comes in. Pad is always on; the rest arrive
+  /// in order as [setMusicIntensity] rises — bass early, drums when the board
+  /// is well under way, melody as the reward for the home stretch.
+  static const Map<String, double> _stemThreshold = <String, double>{
+    'pad': 0.0,
+    'bass': 0.12,
+    'drums': 0.40,
+    'melody': 0.65,
+  };
 
   final Map<String, _Voices> _voices = <String, _Voices>{};
-  AudioPlayer? _music;
+  final Map<String, AudioPlayer> _music = <String, AudioPlayer>{};
 
   bool _ready = false;
   bool _musicReady = false;
+  bool _musicPlaying = false;
   bool _suspended = false;
+
+  /// 0 = menu (pad only) … 1 = every stem. Set by whatever screen is up.
+  double _intensity = 0.0;
 
   /// Prepares every player. Bounded and never allowed to throw.
   ///
@@ -107,9 +125,10 @@ class AudioService {
         );
 
         // Copy every asset out of the bundle up front, in parallel.
-        await AudioCache.instance.loadAll(
-          <String>[for (final String c in _cues.keys) 'audio/$c.wav', _musicAsset],
-        );
+        await AudioCache.instance.loadAll(<String>[
+          for (final String c in _cues.keys) 'audio/$c.wav',
+          for (final String m in _stems) 'audio/music_$m.wav',
+        ]);
 
         await Future.wait<void>(<Future<void>>[
           for (final MapEntry<String, int> e in _cues.entries) _prepare(e.key, e.value),
@@ -174,6 +193,10 @@ class AudioService {
   void unlock() => _play('unlock', volume: 0.75);
   void win() => _play('win', volume: 0.9);
 
+  /// The chapter finale. Bigger than [win], and distinct from it — the one
+  /// clear in forty that should not sound like the other thirty-nine.
+  void bossWin() => _play('boss_win', volume: 0.95);
+
   /// A ball settling. [indexInRun] is its position within the pour, 0-based —
   /// successive balls step up the scale so a four-ball pour lands as a phrase
   /// rather than as the same plop four times.
@@ -186,10 +209,7 @@ class AudioService {
 
   // --------------------------------------------------------------- the score
 
-  /// Starts (or restarts) the ambient loop, if the player wants it.
-  ///
-  /// Safe to call repeatedly — it is a no-op while already playing, so screens
-  /// can simply assert "music should be on" without tracking who started it.
+  /// Starts the stems, if the player wants music. Safe to call repeatedly.
   void startMusic() {
     if (!_settings.music || _suspended) return;
     unawaited(_startMusic());
@@ -197,46 +217,95 @@ class AudioService {
 
   Future<void> _startMusic() async {
     try {
-      if (_music == null) {
-        final AudioPlayer p = AudioPlayer(playerId: 'bubblesort_music');
-        await p.setReleaseMode(ReleaseMode.loop);
-        await p.setVolume(0);
-        await p.setSource(AssetSource(_musicAsset));
-        _music = p;
+      if (_music.isEmpty) {
+        for (final String m in _stems) {
+          final AudioPlayer p = AudioPlayer(playerId: 'bubblesort_music_$m');
+          await p.setReleaseMode(ReleaseMode.loop);
+          await p.setVolume(0);
+          await p.setSource(AssetSource('audio/music_$m.wav'));
+          _music[m] = p;
+        }
         _musicReady = true;
       }
-      if (!_musicReady) return;
-      if (_music!.state == PlayerState.playing) return;
-      await _music!.resume();
-      await _fadeMusic(to: _musicVolume);
+      if (!_musicReady || _musicPlaying) return;
+
+      // All four started back to back with nothing awaited between them, so
+      // they begin as close to together as the platform allows. The rhythm is
+      // one file, so the only thing that can drift is a pad against a pluck,
+      // which is inaudible at the offsets involved.
+      _musicPlaying = true;
+      await Future.wait<void>(<Future<void>>[
+        for (final AudioPlayer p in _music.values) p.resume(),
+      ]);
+      await _applyIntensity(fade: true);
     } catch (e) {
       debugPrint('Bubble Sort music unavailable: $e');
       _musicReady = false;
+      _musicPlaying = false;
     }
+  }
+
+  /// How much of the score is playing. The board sets this to the fraction
+  /// of vessels sealed; the menu sets it to zero.
+  void setMusicIntensity(double v) {
+    final double clamped = v.clamp(0.0, 1.0);
+    if ((clamped - _intensity).abs() < 0.001) return;
+    _intensity = clamped;
+    if (_musicPlaying) unawaited(_applyIntensity(fade: true));
+  }
+
+  /// Rewinds every stem to the top together. Called on entering a board, so
+  /// any drift the platform has accumulated is thrown away at the one moment
+  /// the player is not listening closely — the level transition.
+  void resyncMusic() {
+    if (!_musicPlaying) return;
+    unawaited(Future.wait<void>(<Future<void>>[
+      for (final AudioPlayer p in _music.values) p.seek(Duration.zero),
+    ]).catchError((Object _) => <void>[]));
+  }
+
+  Future<void> _applyIntensity({required bool fade}) async {
+    final List<Future<void>> ramps = <Future<void>>[];
+    for (final String m in _stems) {
+      final AudioPlayer? p = _music[m];
+      if (p == null) continue;
+      final double threshold = _stemThreshold[m]!;
+      // Each stem fades in across a short band above its threshold rather
+      // than switching on, so a seal brings the bass *up* instead of in.
+      final double presence = threshold == 0
+          ? 1.0
+          : ((_intensity - threshold) / 0.18).clamp(0.0, 1.0);
+      final double target = _stemLevel[m]! * presence;
+      ramps.add(fade ? _rampTo(p, target) : p.setVolume(target));
+    }
+    await Future.wait(ramps);
   }
 
   void stopMusic() => unawaited(_stopMusic());
 
   Future<void> _stopMusic() async {
-    final AudioPlayer? p = _music;
-    if (p == null) return;
+    if (!_musicPlaying) return;
     try {
-      await _fadeMusic(to: 0);
-      await p.pause();
+      await Future.wait<void>(<Future<void>>[
+        for (final AudioPlayer p in _music.values) _rampTo(p, 0),
+      ]);
+      await Future.wait<void>(<Future<void>>[
+        for (final AudioPlayer p in _music.values) p.pause(),
+      ]);
     } catch (_) {
       // Nothing to recover; the track is already effectively off.
     }
+    _musicPlaying = false;
   }
 
-  /// A hard cut into or out of a music loop is audible and cheap-sounding, so
-  /// every start and stop is ramped over a handful of frames.
-  Future<void> _fadeMusic({required double to, int steps = 12}) async {
-    final AudioPlayer? p = _music;
-    if (p == null) return;
+  /// A hard cut into or out of a loop is audible and cheap-sounding, so every
+  /// change of level is ramped over a handful of frames.
+  Future<void> _rampTo(AudioPlayer p, double to, {int steps = 10}) async {
     final double from = p.volume;
+    if ((to - from).abs() < 0.005) return;
     for (int i = 1; i <= steps; i++) {
       await p.setVolume(from + (to - from) * (i / steps));
-      await Future<void>.delayed(const Duration(milliseconds: 18));
+      await Future<void>.delayed(const Duration(milliseconds: 22));
     }
   }
 
@@ -249,7 +318,10 @@ class AudioService {
   void suspend() {
     if (_suspended) return;
     _suspended = true;
-    unawaited(_music?.pause());
+    for (final AudioPlayer p in _music.values) {
+      unawaited(p.pause());
+    }
+    _musicPlaying = false;
   }
 
   void resumeAll() {
@@ -265,8 +337,10 @@ class AudioService {
       }
     }
     _voices.clear();
-    await _music?.dispose();
-    _music = null;
+    for (final AudioPlayer p in _music.values) {
+      await p.dispose();
+    }
+    _music.clear();
     _ready = false;
     _musicReady = false;
   }

@@ -505,63 +505,188 @@ win = mix(
 )
 write('win.wav', reverb(win, wet=0.38, tail=1.4), peak=0.66)
 
+# --------------------------------------------------------------- boss win
+#
+# The chapter finale. The ordinary win, then a second, higher cadence on top
+# of it after a beat — the same phrase answered an octave up — with a longer
+# shimmer and a deeper sub. One clear in forty should not sound like the other
+# thirty-nine.
+boss_arp = [(PENTA[0], 0.00), (PENTA[2], 0.09), (PENTA[4], 0.18), (PENTA[5], 0.27),
+            (PENTA[7], 0.38), (PENTA[8], 0.60), (PENTA[9], 0.72), (PENTA[7] * 2, 0.86)]
+boss = mix(
+    *[delay(gain(fm_bell(f, 2.2 - d, ratio=2.0, index=3.4, index_decay=8,
+                         amp_decay=2.2, attack=0.003), 1.0), d) for f, d in boss_arp],
+    *[gain(fm_bell(f, 2.8, ratio=1.0, index=0.9, index_decay=5,
+                   amp_decay=1.4, attack=0.08), 0.32)
+      for f in (D, D * 1.5, PENTA[1], D * 2)],
+    gain(fm_bell(D / 4, 2.2, ratio=1.0, index=0.8, index_decay=12,
+                 amp_decay=1.8, attack=0.008), 0.7),
+    delay(gain(mix(pluck(PENTA[8], 1.0, seed=77), delay(pluck(PENTA[9], 0.9, seed=88), 0.07),
+                   delay(pluck(PENTA[7] * 2, 0.8, seed=99), 0.14),
+                   delay(pluck(PENTA[9] * 2, 0.7, seed=111), 0.22)), 0.30), 0.9),
+    gain(crackle(303, bright=1.4), 0.34),
+    gain(tinkle(606, count=34, spread=1.1, bright=1.4), 0.40),
+)
+write('boss_win.wav', reverb(boss, wet=0.42, tail=1.8), peak=0.70)
+
 print('music')
 
-# ------------------------------------------------------------- ambient loop
+# ------------------------------------------------------------- music stems
 #
-# 25.6 seconds of Dsus2 pad. Everything that moves in it — the filter LFO, the
-# tremolo, the arpeggio — completes a whole number of cycles inside the loop,
-# which is what lets it repeat without a seam. There is no drum track and no
-# melody on purpose: the player is thinking, and the score's job is to make
-# the room feel occupied, not to be listened to.
-LOOP = 25.6
+# The score is four loops that play *together*, and the game decides how many
+# of them are audible. Pad alone on the menu; on the board, each vessel sealed
+# brings in another layer, so by the last seal the full track is playing.
+# Music becomes feedback for progress rather than wallpaper behind it.
+#
+# All four are exactly the same length and tempo, so they stay in phase:
+#
+#   pad     sustained chords, filtered — always on
+#   bass    sub root notes with a plucked attack
+#   drums   kick and hats in ONE file, so they can never drift against
+#           each other (players start within tens of ms of one another, which
+#           is inaudible on a pad and a flam on a drum kit)
+#   melody  a plucked pentatonic line
+#
+# 96 BPM, eight bars of 4/4 = 32 beats = 20.0s. I - vi - IV - V in D, two
+# bars per chord. Every LFO completes a whole number of cycles in the loop.
+BPM = 96.0
+BEAT = 60.0 / BPM
+BARS = 8
+LOOP = BEAT * 4 * BARS          # 20.0s
 n_m = int(LOOP * MUSIC_SR)
-music = [0.0] * n_m
-
-# Pad: three voices, each slightly detuned and each with its own slow tremolo.
-voices = [
-    (D / 2, 0.55, 1.0),
-    (D, 0.34, 2.0),
-    (D * 1.5, 0.26, 3.0),   # the fifth
-    (PENTA[1], 0.18, 2.0),  # the sus2
-]
 two_pi = 2 * math.pi
-for f, amp, trem_cycles in voices:
-    for det in (-0.0016, 0.0, 0.0021):
-        ph = 0.0
-        fd = f * (1 + det)
-        for i in range(n_m):
-            t = i / MUSIC_SR
-            ph += two_pi * fd / MUSIC_SR
-            trem = 0.72 + 0.28 * math.sin(two_pi * trem_cycles * t / LOOP)
-            s = math.sin(ph) + 0.24 * math.sin(2 * ph) + 0.07 * math.sin(3 * ph)
-            music[i] += s * amp * trem * 0.33
 
-# Slow filter breath: two full cycles across the loop.
+# Chord tones (semitones from A4 → Hz). Two bars each.
+def hz(semi, octave=0):
+    return note(semi, octave)
+
+CHORDS = [
+    # D major       : D  F# A
+    [hz(5, -1), hz(9, -1), hz(0, 0)],
+    # B minor       : B  D  F#
+    [hz(2, -1), hz(5, -1), hz(9, -1)],
+    # G major       : G  B  D
+    [hz(10, -2), hz(2, -1), hz(5, -1)],
+    # A major       : A  C# E
+    [hz(0, -1), hz(4, -1), hz(7, -1)],
+]
+ROOTS = [hz(5, -2), hz(2, -2), hz(10, -3), hz(0, -2)]   # one octave under
+
+def chord_at(t):
+    return int((t / LOOP) * 4) % 4
+
+# --- pad --------------------------------------------------------------------
+pad = [0.0] * n_m
+for ci_, chord in enumerate(CHORDS):
+    t0 = ci_ * LOOP / 4
+    t1 = t0 + LOOP / 4
+    i0, i1 = int(t0 * MUSIC_SR), int(t1 * MUSIC_SR)
+    # Each chord tone, three slightly detuned voices, with a slow swell so the
+    # change between chords is a crossfade rather than a step.
+    for f in chord:
+        for det in (-0.0018, 0.0, 0.0023):
+            ph = 0.0
+            fd = f * (1 + det)
+            for i in range(i0, i1):
+                t = i / MUSIC_SR
+                ph += two_pi * fd / MUSIC_SR
+                local = (t - t0) / (t1 - t0)
+                env = min(1.0, local / 0.12) * min(1.0, (1 - local) / 0.10 + 0.0)
+                env = max(env, 0.0)
+                s_ = math.sin(ph) + 0.22 * math.sin(2 * ph) + 0.06 * math.sin(3 * ph)
+                pad[i] += s_ * 0.11 * (0.35 + 0.65 * env)
+# Slow filter breath, two cycles per loop.
 out = [0.0] * n_m
 prev = 0.0
 dt = 1.0 / MUSIC_SR
 for i in range(n_m):
     lfo = 0.5 + 0.5 * math.sin(two_pi * 2 * (i / n_m))
-    f = 420 + 1500 * lfo
+    f = 380 + 1400 * lfo
     rc = 1.0 / (two_pi * f)
     a = dt / (rc + dt)
-    prev += a * (music[i] - prev)
+    prev += a * (pad[i] - prev)
     out[i] = prev
-music = out
+pad = reverb(out, wet=0.36, decay=0.80, tail=0.0, sr=MUSIC_SR)[:n_m]
+write_loop('music_pad.wav', pad, peak=0.40)
 
-# Sparse plucks over the top, on beats that divide the loop evenly.
-pluck_plan = [(0.0, PENTA[4]), (3.2, PENTA[5]), (6.4, PENTA[7]),
-              (9.6, PENTA[5]), (12.8, PENTA[8]), (16.0, PENTA[4]),
-              (19.2, PENTA[7]), (22.4, PENTA[5])]
-for at, f in pluck_plan:
-    p = gain(pluck(f, 2.4, damp=0.62, seed=int(f) % 977, sr=MUSIC_SR), 0.16)
+# --- bass -------------------------------------------------------------------
+bass = [0.0] * n_m
+def bass_note(f, at, dur):
+    n = int(dur * MUSIC_SR)
     start = int(at * MUSIC_SR)
-    for k, s in enumerate(p):
-        # wrap, so a pluck near the end of the loop rings into its own start
-        music[(start + k) % n_m] += s
+    ph = 0.0
+    for k in range(n):
+        t = k / MUSIC_SR
+        # A little pitch drop at the attack — the "pluck".
+        fk = f * (1 + 0.6 * math.exp(-t * 60))
+        ph += two_pi * fk / MUSIC_SR
+        env = math.exp(-t * 2.6) * min(1.0, k / 40)
+        s_ = math.sin(ph) + 0.35 * math.sin(2 * ph) + 0.12 * math.sin(3 * ph)
+        bass[(start + k) % n_m] += s_ * env * 0.9
+for bar in range(BARS):
+    root = ROOTS[bar // 2]
+    b0 = bar * 4 * BEAT
+    bass_note(root, b0, BEAT * 1.6)                 # beat 1
+    bass_note(root, b0 + 2 * BEAT, BEAT * 1.2)      # beat 3
+    bass_note(root * 2, b0 + 3.5 * BEAT, BEAT * 0.5)  # the "and" of 4, an octave up
+bass = lowpass(bass, 900, MUSIC_SR)
+write_loop('music_bass.wav', bass, peak=0.55)
 
-music = reverb(music, wet=0.34, decay=0.78, tail=0.0, sr=MUSIC_SR)[:n_m]
-write_loop('music_loop.wav', music, peak=0.46)
+# --- drums ------------------------------------------------------------------
+drums = [0.0] * n_m
+def kick(at):
+    n = int(0.28 * MUSIC_SR); start = int(at * MUSIC_SR); ph = 0.0
+    for k in range(n):
+        t = k / MUSIC_SR
+        f = 48 + 90 * math.exp(-t * 28)
+        ph += two_pi * f / MUSIC_SR
+        env = math.exp(-t * 9)
+        drums[(start + k) % n_m] += math.sin(ph) * env * 1.0
+def hat(at, open_=False, accent=1.0):
+    d = 0.22 if open_ else 0.045
+    n = int(d * MUSIC_SR); start = int(at * MUSIC_SR)
+    r = Rng(int(at * 1000) + 7)
+    buf = [r.bi() for _ in range(n)]
+    buf = bandpass(buf, 6000, 11000, MUSIC_SR)
+    for k in range(n):
+        t = k / MUSIC_SR
+        env = math.exp(-t * (14 if open_ else 70))
+        drums[(start + k) % n_m] += buf[k] * env * 0.28 * accent
+for bar in range(BARS):
+    b0 = bar * 4 * BEAT
+    kick(b0)
+    kick(b0 + 2 * BEAT)
+    # A ghost kick before beat 3 on bars 4 and 8 — the tiny swing that stops
+    # eight bars of the same pattern sounding like a metronome.
+    if bar % 4 == 3:
+        kick(b0 + 1.5 * BEAT)
+    for e in range(8):
+        at = b0 + e * BEAT / 2
+        accent = 0.55 if e % 2 == 0 else 1.0     # offbeats louder: the lo-fi lean
+        hat(at, open_=(bar % 4 == 3 and e == 7), accent=accent)
+write_loop('music_drums.wav', drums, peak=0.50)
+
+# --- melody -----------------------------------------------------------------
+melody = [0.0] * n_m
+# One phrase per two bars, over the chord that is playing. Written as
+# (beat offset, pentatonic degree, length in beats). The rests matter as much
+# as the notes: a melody with no gaps in it is a texture, not a tune.
+PHRASES = [
+    [(0, 4, 1), (1, 5, 0.5), (1.5, 4, 0.5), (2.5, 2, 1), (4, 1, 1.5), (6, 2, 2)],
+    [(0, 2, 1), (1.5, 4, 0.5), (2, 5, 1), (4, 7, 1), (5, 5, 0.5), (5.5, 4, 2.5)],
+    [(0.5, 1, 1), (2, 2, 0.5), (2.5, 4, 1.5), (4, 5, 1), (6, 4, 0.5), (6.5, 2, 1.5)],
+    [(0, 4, 0.5), (0.5, 5, 0.5), (1, 7, 1.5), (3, 5, 1), (4.5, 4, 1), (6, 0, 2)],
+]
+for ph_i, phrase in enumerate(PHRASES):
+    t0 = ph_i * 2 * 4 * BEAT
+    for (beat, deg, length) in phrase:
+        f = PENTA[deg]
+        p = gain(pluck(f, min(length * BEAT * 1.4, 2.2), damp=0.55,
+                       seed=int(f * 3) % 977 + ph_i, sr=MUSIC_SR), 0.30)
+        start = int((t0 + beat * BEAT) * MUSIC_SR)
+        for k, v in enumerate(p):
+            melody[(start + k) % n_m] += v
+melody = reverb(melody, wet=0.30, decay=0.74, tail=0.0, sr=MUSIC_SR)[:n_m]
+write_loop('music_melody.wav', melody, peak=0.42)
 
 print('done')

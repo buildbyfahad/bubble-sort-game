@@ -14,6 +14,7 @@ import 'package:bubble_sort/ui/widgets/board_view.dart';
 import 'dart:async';
 
 import 'package:bubble_sort/app.dart';
+import 'package:bubble_sort/data/level.dart';
 import 'package:bubble_sort/data/level_catalog.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -151,6 +152,29 @@ void main() {
     await expectLater(find.byType(BoardView), matchesGoldenFile('goldens/board_sealed.png'));
 
     c.dispose();
+  });
+
+  renderTest('game — hidden balls', (WidgetTester tester) async {
+    useHandset(tester);
+    // The first level with concealed vessels. Nothing may leak the hue.
+    final int id = loadCatalog().levels.firstWhere((Level l) => l.hasHiddenBalls).id;
+    await tester.pumpWidget(harness(await buildScope(
+      child: GameScreen(levelId: id),
+      prefs: <String, Object>{'progress.seenTutorial': true},
+    )));
+    await settle(tester, steps: 16);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/game_hidden.png'));
+  });
+
+  renderTest('game — precision level', (WidgetTester tester) async {
+    useHandset(tester);
+    final int id = loadCatalog().levels.firstWhere((Level l) => l.isPrecision).id;
+    await tester.pumpWidget(harness(await buildScope(
+      child: GameScreen(levelId: id),
+      prefs: <String, Object>{'progress.seenTutorial': true},
+    )));
+    await settle(tester, steps: 16);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/game_precision.png'));
   });
 
   renderTest('board — colour assist on', (WidgetTester tester) async {

@@ -30,7 +30,14 @@ class Bubble extends StatelessWidget {
     this.colorAssist = false,
     this.elevation = 1.0,
     this.dim = 0.0,
+    this.hidden = false,
   });
+
+  /// Concealed: drawn as an unlit glass sphere with a question mark, in no
+  /// colour at all. The hue is still passed so the widget's identity is
+  /// stable when it is revealed, but nothing about it may leak through — a
+  /// tint would turn a memory puzzle back into a matching one.
+  final bool hidden;
 
   final BubbleHue hue;
   final double size;
@@ -47,6 +54,13 @@ class Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (hidden) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(painter: _HiddenBubblePainter(dim: dim)),
+      );
+    }
     return SizedBox(
       width: size,
       height: size,
@@ -283,4 +297,69 @@ class _BubblePainter extends CustomPainter {
       old.colorAssist != colorAssist ||
       old.elevation != elevation ||
       old.dim != dim;
+}
+
+
+/// A concealed ball: dark glass, one specular, a question mark.
+///
+/// Drawn in the vessel's own greys so it reads as "there is a ball here and
+/// you cannot see it" rather than as a ball of some ninth colour.
+class _HiddenBubblePainter extends CustomPainter {
+  _HiddenBubblePainter({required this.dim});
+
+  final double dim;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double r = size.width / 2;
+    final Offset c = Offset(r, r);
+    final double lit = 1 - dim * 0.6;
+
+    canvas.drawCircle(
+      c,
+      r * 0.96,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          Offset(r * 0.72, r * 0.68),
+          r * 1.15,
+          <Color>[
+            Color.lerp(DS.surfaceHigh, const Color(0xFFFFFFFF), 0.10 * lit)!,
+            DS.surfaceRaised,
+            DS.inkDeep,
+          ],
+          <double>[0.0, 0.55, 1.0],
+        ),
+    );
+    canvas.drawCircle(
+      c,
+      r * 0.96,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = DS.hairlineStrong,
+    );
+    // The specular is what keeps it a sphere and not a disc.
+    canvas.drawCircle(
+      Offset(r * 0.66, r * 0.58),
+      r * 0.16,
+      Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.14 * lit),
+    );
+
+    final TextPainter tp = TextPainter(
+      text: TextSpan(
+        text: '?',
+        style: TextStyle(
+          fontFamily: 'Sora',
+          fontSize: r * 1.05,
+          fontWeight: FontWeight.w600,
+          color: DS.textSecondary.withValues(alpha: 0.7 * lit),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(_HiddenBubblePainter old) => old.dim != dim;
 }

@@ -1,5 +1,22 @@
 import 'package:flutter/foundation.dart';
 
+/// What kind of level this is. Ordinary levels are the campaign; the other
+/// two change the rules rather than just the board.
+enum LevelMode {
+  /// The default. No budget, nothing concealed unless [Level.hiddenVessels]
+  /// says so.
+  normal,
+
+  /// A hard pour budget. Every pour counts, including ones later undone, and
+  /// exceeding the budget fails the board. Undo is still allowed — it just no
+  /// longer refunds the pour, which turns it from a safety net into a choice.
+  precision,
+
+  /// The chapter finale: one more colour than the rest of the chapter, its
+  /// own completion cue, and a cosmetic reward.
+  boss,
+}
+
 /// Pure level data - no Flutter widgets, no colours, no layout.
 ///
 /// Levels are content, not code. Keeping them behind this plain model is what
@@ -16,6 +33,8 @@ class Level {
     required this.par,
     required this.parIsOptimal,
     required this.tubes,
+    this.mode = LevelMode.normal,
+    this.hiddenVessels = 0,
   });
 
   /// Decodes one entry of `assets/levels/levels.json`.
@@ -39,6 +58,8 @@ class Level {
       emptyTubes: json['e'] as int,
       par: json['p'] as int,
       parIsOptimal: (json['x'] as int) == 1,
+      mode: LevelMode.values[(json['m'] as int?) ?? 0],
+      hiddenVessels: (json['h'] as int?) ?? 0,
       tubes: tubes,
     );
   }
@@ -70,7 +91,23 @@ class Level {
   /// Values index into the shared hue palette.
   final List<List<int>> tubes;
 
+  final LevelMode mode;
+
+  /// How many of the filled vessels (the first ones, since the catalogue
+  /// orders vessels filled-first) start with everything below their top ball
+  /// concealed. Zero for an ordinary level.
+  final int hiddenVessels;
+
   int get tubeCount => tubes.length;
+
+  bool get isBoss => mode == LevelMode.boss;
+  bool get isPrecision => mode == LevelMode.precision;
+  bool get hasHiddenBalls => hiddenVessels > 0;
+
+  /// The pour budget on a precision level. Par plus a little slack: par on a
+  /// beam-found board is close to optimal, and demanding it exactly would make
+  /// the mode a memory test of the solver's line rather than a puzzle.
+  int get pourBudget => par + 2;
 }
 
 /// A named run of levels. Chapters exist so a thousand-level list has somewhere

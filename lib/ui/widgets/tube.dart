@@ -90,7 +90,11 @@ class Tube extends StatefulWidget {
     required this.dim,
     required this.onTap,
     this.fractureSeed = 0,
+    this.hiddenBelow = 0,
   });
+
+  /// Balls from the base that are concealed. See [BoardState.hiddenBelow].
+  final int hiddenBelow;
 
   /// Chooses which of the generated fracture patterns this vessel breaks
   /// along. Two vessels sealing on the same board must not crack identically.
@@ -348,6 +352,7 @@ class _TubeState extends State<Tube> with TickerProviderStateMixin {
             size: m.ball,
             colorAssist: widget.colorAssist,
             dim: widget.dim,
+            hidden: k < widget.hiddenBelow,
           ),
         ),
       ));

@@ -8,7 +8,14 @@ import '../services/haptic_service.dart';
 import 'board_state.dart';
 import 'solver.dart';
 
-enum GameStatus { playing, resolving, solved }
+enum GameStatus {
+  playing,
+  resolving,
+  solved,
+
+  /// A precision level whose pour budget ran out. Terminal until restart.
+  failed,
+}
 
 /// Orchestrates one playthrough of one level.
 ///
@@ -24,7 +31,7 @@ class GameController extends ChangeNotifier {
     required HapticService haptics,
   })  : _audio = audio,
         _haptics = haptics,
-        _state = BoardState(level.tubes, level.capacity);
+        _state = BoardState.withHidden(level.tubes, level.capacity, level.hiddenVessels);
 
   final Level level;
   final AudioService _audio;
@@ -41,7 +48,38 @@ class GameController extends ChangeNotifier {
 
   final List<Pour> _history = <Pour>[];
   int get moves => _history.length;
-  bool get canUndo => _history.isNotEmpty && _flight == null && _status != GameStatus.solved;
+  bool get canUndo =>
+      _history.isNotEmpty &&
+      _flight == null &&
+      _status != GameStatus.solved &&
+      _status != GameStatus.failed;
+
+  /// Pours ever made on this board, undo or not.
+  ///
+  /// This is what a precision level's budget is charged against. Charging
+  /// [moves] instead would let undo refund a pour, and a budget that can be
+  /// refunded is not a budget.
+  int _totalPours = 0;
+  int get totalPours => _totalPours;
+
+  /// Pours remaining on a precision level; null otherwise.
+  int? get poursLeft => level.isPrecision ? level.pourBudget - _totalPours : null;
+
+  /// Consecutive vessels sealed without an undo in between.
+  ///
+  /// The game's one reward for playing *well* rather than merely playing:
+  /// it scales the level's coin payout, and it shows on the board so a player
+  /// on a run knows they are on one.
+  int _flow = 0;
+  int get flow => _flow;
+
+  /// Longest run this board, for the payout.
+  int _bestFlow = 0;
+  int get bestFlow => _bestFlow;
+
+  /// ×1 at no streak, climbing a quarter per consecutive seal, capped at ×2.
+  static double multiplierFor(int flow) => flow <= 1 ? 1.0 : (1 + 0.25 * (flow - 1)).clamp(1.0, 2.0);
+  double get flowMultiplier => multiplierFor(_bestFlow);
 
   /// The pour currently in the air. While this is set, the destination's
   /// arriving balls are withheld from the board and drawn by the flight
@@ -105,6 +143,9 @@ class GameController extends ChangeNotifier {
   /// Called when the level is cleared, after the celebration beat has started.
   VoidCallback? onSolved;
 
+  /// Called when a precision level runs out of pours.
+  VoidCallback? onFailed;
+
   Timer? _flightTimer;
   Timer? _sealTimer;
   Timer? _rejectTimer;
@@ -146,7 +187,7 @@ class GameController extends ChangeNotifier {
   // ------------------------------------------------------------------- input
 
   void tapTube(int i) {
-    if (_status == GameStatus.solved) return;
+    if (_status == GameStatus.solved || _status == GameStatus.failed) return;
     // A pour is already queued behind the one in the air. Taking a third would
     // mean acting on a board the player cannot see yet.
     if (_queued != null) return;
@@ -229,6 +270,7 @@ class GameController extends ChangeNotifier {
     final (BoardState next, Pour pour) = _state.pour(from, to);
     _state = next;
     _history.add(pour);
+    _totalPours++;
     _selected = null;
     _flight = pour;
     _flightToken++;
@@ -256,6 +298,8 @@ class GameController extends ChangeNotifier {
     if (sealedNow > sealedBefore && _state.isSealed(pour.to)) {
       _justSealed = <int>{pour.to};
       _sealToken++;
+      _flow++;
+      if (_flow > _bestFlow) _bestFlow = _flow;
       _audio.seal(sealedNow);
       _haptics.seal();
     } else {
@@ -263,6 +307,21 @@ class GameController extends ChangeNotifier {
     }
 
     final bool solved = _state.isSolved;
+
+    // The budget is checked on landing, not on launch, so the pour that
+    // breaks it is still seen to happen. Failing on the tap would leave the
+    // board looking like the game refused an input.
+    final int? left = poursLeft;
+    if (!solved && left != null && left <= 0) {
+      _queued = null;
+      _status = GameStatus.failed;
+      _audio.reject();
+      _haptics.reject();
+      notifyListeners();
+      onFailed?.call();
+      return;
+    }
+
     _status = solved ? GameStatus.resolving : GameStatus.playing;
 
     _sealTimer?.cancel();
@@ -274,7 +333,7 @@ class GameController extends ChangeNotifier {
         _justSealed = <int>{};
         if (solved) {
           _status = GameStatus.solved;
-          _audio.win();
+          level.isBoss ? _audio.bossWin() : _audio.win();
           _haptics.celebrate();
           onSolved?.call();
         }
@@ -312,6 +371,8 @@ class GameController extends ChangeNotifier {
     _state = _state.unpour(p);
     _selected = null;
     _queued = null;
+    // The streak is for seals made *without* taking anything back.
+    _flow = 0;
     _lastLandedTube = -1;
     _lastLandedCount = 0;
     _justSealed = <int>{};
@@ -326,8 +387,11 @@ class GameController extends ChangeNotifier {
     _flightTimer?.cancel();
     _sealTimer?.cancel();
     _cancelLandCues();
-    _state = BoardState(level.tubes, level.capacity);
+    _state = BoardState.withHidden(level.tubes, level.capacity, level.hiddenVessels);
     _history.clear();
+    _totalPours = 0;
+    _flow = 0;
+    _bestFlow = 0;
     _selected = null;
     _queued = null;
     _flight = null;
@@ -347,7 +411,7 @@ class GameController extends ChangeNotifier {
   /// [hintPending] lets the button show progress instead of freezing.
   Future<bool> requestHint() async {
     if (_hintPending || _flight != null || _queued != null) return false;
-    if (_status == GameStatus.solved) return false;
+    if (_status == GameStatus.solved || _status == GameStatus.failed) return false;
     _hintPending = true;
     _selected = null;
     notifyListeners();

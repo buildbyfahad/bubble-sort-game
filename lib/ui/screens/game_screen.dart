@@ -58,15 +58,33 @@ class _GameScreenState extends State<GameScreen> {
       level: _scope.catalog.byId(widget.levelId),
       audio: _scope.audio,
       haptics: _scope.haptics,
-    )..onSolved = _handleSolved;
-    _controller.addListener(_advanceTutorial);
+    )
+      ..onSolved = _handleSolved
+      ..onFailed = _handleFailed;
+    _controller
+      ..addListener(_advanceTutorial)
+      ..addListener(_driveMusic);
+    // A fresh board starts the score from the top, in sync.
+    _scope.audio
+      ..resyncMusic()
+      ..setMusicIntensity(0.0);
+  }
+
+  /// The score follows the board: each vessel sealed brings in more of it.
+  void _driveMusic() {
+    final int total = _controller.level.colorCount;
+    if (total == 0) return;
+    _scope.audio.setMusicIntensity(_controller.state.sealedCount / total);
   }
 
   @override
   void dispose() {
     _controller
       ..removeListener(_advanceTutorial)
+      ..removeListener(_driveMusic)
       ..dispose();
+    // Back to the menu mix.
+    _scope.audio.setMusicIntensity(0.0);
     super.dispose();
   }
 
@@ -122,11 +140,15 @@ class _GameScreenState extends State<GameScreen> {
     // Pay the board out. A replay pays a token amount rather than the full
     // rate — see WalletService.payoutFor for why the difference matters.
     final ClearGrade grade = gradeFor(_controller.moves, level.par);
-    final int coins = WalletService.payoutFor(
+    final int base = WalletService.payoutFor(
       flawless: grade == ClearGrade.flawless,
       great: grade == ClearGrade.great,
       firstClear: firstClear,
     );
+    // The flow streak scales the payout; a finale pays double on top. A boss
+    // that paid the same as the level before it would not be a boss.
+    final double mult = _controller.flowMultiplier * (level.isBoss ? 2 : 1);
+    final int coins = (base * mult).round();
     await _scope.wallet.grantCoins(coins);
     if (firstClear) await _scope.wallet.grantHints(1);
 
@@ -143,6 +165,7 @@ class _GameScreenState extends State<GameScreen> {
           improved: improved,
           hintsAwarded: firstClear ? 1 : 0,
           coinsAwarded: coins,
+          bestFlow: _controller.bestFlow,
           overallBefore: before,
           overallAfter: after,
           hasNext: level.id < _scope.catalog.length,
@@ -158,6 +181,7 @@ class _GameScreenState extends State<GameScreen> {
             setState(() {
               _controller
                 ..removeListener(_advanceTutorial)
+                ..removeListener(_driveMusic)
                 ..dispose();
               _build();
             });
@@ -168,6 +192,25 @@ class _GameScreenState extends State<GameScreen> {
               ..pop()
               ..pop();
           },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleFailed() async {
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(
+      sheetRoute<void>(
+        dismissible: false,
+        _OutOfPoursSheet(
+          level: _controller.level,
+          onRetry: () {
+            Navigator.of(context).pop();
+            _controller.restart();
+          },
+          onHome: () => Navigator.of(context)
+            ..pop()
+            ..pop(),
         ),
       ),
     );
@@ -221,6 +264,7 @@ class _GameScreenState extends State<GameScreen> {
                   level: level,
                   chapter: _chapter,
                   sealed: sealed,
+                  flow: _controller.flow,
                   onBack: () {
                     _scope.audio.tap();
                     Navigator.of(context).pop();
@@ -337,6 +381,27 @@ class _GameScreenState extends State<GameScreen> {
         style: Type.bodyStrong.copyWith(color: DS.hues[0].base, fontSize: 13.5),
       );
     }
+    final int? left = _controller.poursLeft;
+    if (left != null) {
+      // Precision: the budget is the whole point of the level, so it owns the
+      // status line. Turns to the warning hue over the last three.
+      final Color c = left <= 3 ? DS.hues[0].base : DS.gold;
+      return Row(
+        key: ValueKey<int>(left),
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text('$left', style: Type.numeralSm.copyWith(fontSize: 15, color: c)),
+          Text('  POURS LEFT', style: Type.label.copyWith(color: c.withValues(alpha: 0.7))),
+          Container(
+            width: 3,
+            height: 3,
+            margin: const EdgeInsets.symmetric(horizontal: DS.s12),
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: DS.textTertiary),
+          ),
+          Text('BUDGET ${level.pourBudget}', style: Type.label),
+        ],
+      );
+    }
     return Row(
       key: ValueKey<int>(_controller.moves),
       mainAxisSize: MainAxisSize.min,
@@ -360,6 +425,7 @@ class _TopBar extends StatelessWidget {
     required this.level,
     required this.chapter,
     required this.sealed,
+    required this.flow,
     required this.onBack,
     required this.onSettings,
   });
@@ -367,8 +433,17 @@ class _TopBar extends StatelessWidget {
   final Level level;
   final Chapter chapter;
   final int sealed;
+  final int flow;
   final VoidCallback onBack;
   final VoidCallback onSettings;
+
+  String get _title {
+    // A finale or a precision level says so instead of its chapter — the
+    // chapter is where you are, the mode is what is about to happen to you.
+    if (level.isBoss) return 'LEVEL ${level.id} · FINALE';
+    if (level.isPrecision) return 'LEVEL ${level.id} · PRECISION';
+    return 'LEVEL ${level.id} · ${chapter.name.toUpperCase()}';
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -380,18 +455,160 @@ class _TopBar extends StatelessWidget {
               child: Column(
                 children: <Widget>[
                   Text(
-                    'LEVEL ${level.id} · ${chapter.name.toUpperCase()}',
-                    style: Type.labelBright,
+                    _title,
+                    style: Type.labelBright.copyWith(
+                      color: level.isBoss
+                          ? DS.gold
+                          : (level.isPrecision ? DS.hues[0].light : null),
+                    ),
                   ),
                   const SizedBox(height: DS.s12),
                   // One pip per colour that still needs sealing. Reads faster
                   // than a fraction and animates for free.
-                  PipRow(total: level.colorCount, filled: sealed),
+                  PipRow(
+                    total: level.colorCount,
+                    filled: sealed,
+                    color: level.isBoss ? DS.gold : DS.aqua,
+                  ),
                 ],
               ),
             ),
-            GhostIconButton(icon: DIcons.settings, semanticLabel: 'Settings', onTap: onSettings),
+            // The flow chip sits where the settings button is until there is
+            // a streak worth showing, then takes its place. Settings is one
+            // tap away on the dock anyway; a streak is the thing that needs
+            // the eye's attention during play.
+            flow >= 2
+                ? _FlowChip(flow: flow)
+                : GhostIconButton(
+                    icon: DIcons.settings,
+                    semanticLabel: 'Settings',
+                    onTap: onSettings,
+                  ),
           ],
+        ),
+      );
+}
+
+/// The live streak: ×1.25, ×1.5 … up to ×2. Pops on each step.
+class _FlowChip extends StatefulWidget {
+  const _FlowChip({required this.flow});
+
+  final int flow;
+
+  @override
+  State<_FlowChip> createState() => _FlowChipState();
+}
+
+class _FlowChipState extends State<_FlowChip> with SingleTickerProviderStateMixin {
+  late final AnimationController _pop;
+
+  @override
+  void initState() {
+    super.initState();
+    _pop = AnimationController(vsync: this, duration: const Duration(milliseconds: 360))
+      ..forward();
+  }
+
+  @override
+  void didUpdateWidget(_FlowChip old) {
+    super.didUpdateWidget(old);
+    if (widget.flow != old.flow) _pop.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double mult = GameController.multiplierFor(widget.flow);
+    final bool maxed = mult >= 2.0;
+    return AnimatedBuilder(
+      animation: _pop,
+      builder: (BuildContext context, _) {
+        final double t = Ease.overshoot.transform(_pop.value);
+        return Transform.scale(
+          scale: 0.7 + t * 0.3,
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: DS.s12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(DS.rPill),
+              color: DS.gold.withValues(alpha: maxed ? 0.22 : 0.12),
+              border: Border.all(color: DS.gold.withValues(alpha: maxed ? 0.8 : 0.45)),
+              boxShadow: maxed ? DS.glow(DS.gold, opacity: 0.25, blur: 18, y: 4) : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const DIcon(DIcons.flame, size: 14, color: DS.gold),
+                const SizedBox(width: DS.s4),
+                Text(
+                  '×${mult == mult.roundToDouble() ? mult.toInt() : mult}',
+                  style: Type.numeralSm.copyWith(fontSize: 14, color: DS.gold),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Precision level, budget spent. Two ways out and no lecture.
+class _OutOfPoursSheet extends StatelessWidget {
+  const _OutOfPoursSheet({
+    required this.level,
+    required this.onRetry,
+    required this.onHome,
+  });
+
+  final Level level;
+  final VoidCallback onRetry;
+  final VoidCallback onHome;
+
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.bottomCenter,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.s16),
+            child: SoftCard(
+              radius: DS.rXl,
+              tint: DS.hues[0].base,
+              padding: const EdgeInsets.fromLTRB(DS.s24, DS.s24, DS.s24, DS.s24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Center(child: Text('PRECISION', style: Type.label)),
+                  const SizedBox(height: DS.s12),
+                  Center(
+                    child: Text(
+                      'Out of pours',
+                      style: Type.titleLg.copyWith(color: DS.hues[0].light),
+                    ),
+                  ),
+                  const SizedBox(height: DS.s12),
+                  Center(
+                    child: Text(
+                      'This board has to be cleared in ${level.pourBudget} pours. '
+                      'Undo still counts — plan before you pour.',
+                      textAlign: TextAlign.center,
+                      style: Type.body,
+                    ),
+                  ),
+                  const SizedBox(height: DS.s24),
+                  PrimaryButton(label: 'Try again', idlePulse: false, onTap: onRetry),
+                  const SizedBox(height: DS.s12),
+                  Center(child: TextAction(icon: DIcons.map, label: 'Menu', onTap: onHome)),
+                ],
+              ),
+            ),
+          ),
         ),
       );
 }

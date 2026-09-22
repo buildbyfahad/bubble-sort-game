@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../data/level.dart';
 import '../../design/tokens.dart';
+import '../../engine/game_controller.dart';
 import '../../design/typography.dart';
 import '../app_scope.dart';
 import '../widgets/buttons.dart';
@@ -66,6 +67,7 @@ class LevelCompleteSheet extends StatefulWidget {
     required this.improved,
     required this.hintsAwarded,
     required this.coinsAwarded,
+    this.bestFlow = 0,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -80,6 +82,9 @@ class LevelCompleteSheet extends StatefulWidget {
   final bool improved;
   final int hintsAwarded;
   final int coinsAwarded;
+
+  /// Longest run of seals without an undo. Shown when it earned a multiplier.
+  final int bestFlow;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -188,6 +193,7 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
               improved: widget.improved,
               hintsAwarded: widget.hintsAwarded,
               coinsAwarded: widget.coinsAwarded,
+              bestFlow: widget.bestFlow,
               overallBefore: widget.overallBefore,
               overallAfter: widget.overallAfter,
               hasNext: widget.hasNext,
@@ -439,6 +445,8 @@ class _CrestPainter extends CustomPainter {
   bool shouldRepaint(_CrestPainter old) => old.t != t || old.grade != grade;
 }
 
+String _fmt(double m) => m == m.roundToDouble() ? '${m.toInt()}' : '$m';
+
 /// The numbers, and what to do next.
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
@@ -450,6 +458,7 @@ class _ResultCard extends StatelessWidget {
     required this.improved,
     required this.hintsAwarded,
     required this.coinsAwarded,
+    this.bestFlow = 0,
     required this.overallBefore,
     required this.overallAfter,
     required this.hasNext,
@@ -466,6 +475,9 @@ class _ResultCard extends StatelessWidget {
   final bool improved;
   final int hintsAwarded;
   final int coinsAwarded;
+
+  /// Longest run of seals without an undo. Shown when it earned a multiplier.
+  final int bestFlow;
   final double overallBefore;
   final double overallAfter;
   final bool hasNext;
@@ -530,6 +542,16 @@ class _ResultCard extends StatelessWidget {
                     animation: animation,
                     start: 0.46,
                   ),
+                if (coinsAwarded > 0 && bestFlow >= 2) ...<Widget>[
+                  const SizedBox(width: DS.s8),
+                  _Reward(
+                    icon: DIcons.flame,
+                    label: '×${_fmt(GameController.multiplierFor(bestFlow))} flow',
+                    accent: DS.gold,
+                    animation: animation,
+                    start: 0.49,
+                  ),
+                ],
                 if (coinsAwarded > 0 && hintsAwarded > 0) const SizedBox(width: DS.s8),
                 if (hintsAwarded > 0)
                   _Reward(

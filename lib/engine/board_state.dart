@@ -29,14 +29,45 @@ class Pour {
 /// what makes undo a one-liner and animation state easy to reason about.
 @immutable
 class BoardState {
-  BoardState(List<List<int>> tubes, this.capacity)
+  BoardState(List<List<int>> tubes, this.capacity, {List<int>? hiddenBelow})
       : tubes = List<List<int>>.unmodifiable(
           tubes.map((List<int> t) => List<int>.unmodifiable(t)),
+        ),
+        hiddenBelow = List<int>.unmodifiable(
+          hiddenBelow ?? List<int>.filled(tubes.length, 0),
         );
+
+  /// A board with the first [hiddenVessels] vessels concealed below the top.
+  factory BoardState.withHidden(List<List<int>> tubes, int capacity, int hiddenVessels) {
+    final List<int> hidden = List<int>.filled(tubes.length, 0);
+    for (int i = 0; i < hiddenVessels && i < tubes.length; i++) {
+      // Everything but the ball at the mouth. A vessel with one ball hides
+      // nothing.
+      hidden[i] = tubes[i].isEmpty ? 0 : tubes[i].length - 1;
+    }
+    return BoardState(tubes, capacity, hiddenBelow: hidden);
+  }
 
   /// Bottom-up contents per vessel; values are hue indices.
   final List<List<int>> tubes;
   final int capacity;
+
+  /// Per vessel, how many balls counted from the *base* are still concealed.
+  ///
+  /// Concealment is a rendering fact, not a rules fact: the rules always see
+  /// the true contents, and so does the solver. It is kept here rather than
+  /// in the widget layer because it has to survive every pour — and the only
+  /// thing that knows a pour happened is this class.
+  ///
+  /// It only ever decreases. A ball can only leave a vessel from the top, so
+  /// hidden balls stay at the bottom and are revealed as the balls above them
+  /// go. Undo does not re-hide: what the player has seen, they have seen.
+  final List<int> hiddenBelow;
+
+  /// Whether the ball at [slot] (0 = base) of vessel [i] is concealed.
+  bool isHidden(int i, int slot) => slot < hiddenBelow[i];
+
+  bool get hasHidden => hiddenBelow.any((int n) => n > 0);
 
   int get tubeCount => tubes.length;
 
@@ -108,8 +139,13 @@ class BoardState {
       next[to].add(next[from].removeLast());
       moved++;
     }
+    // Whatever is now at the mouth of the source has been seen.
+    final List<int> hidden = List<int>.of(hiddenBelow);
+    final int remaining = next[from].length;
+    if (hidden[from] > remaining - 1) hidden[from] = remaining > 0 ? remaining - 1 : 0;
+
     return (
-      BoardState(next, capacity),
+      BoardState(next, capacity, hiddenBelow: hidden),
       Pour(from: from, to: to, count: moved, hue: hue),
     );
   }
@@ -120,7 +156,8 @@ class BoardState {
     for (int k = 0; k < p.count; k++) {
       next[p.from].add(next[p.to].removeLast());
     }
-    return BoardState(next, capacity);
+    // Concealment carries over unchanged — see [hiddenBelow].
+    return BoardState(next, capacity, hiddenBelow: hiddenBelow);
   }
 
   /// True when no legal pour exists — a dead end the player can only leave via
