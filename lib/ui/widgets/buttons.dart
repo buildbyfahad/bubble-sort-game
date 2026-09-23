@@ -445,3 +445,119 @@ class _TextActionState extends State<TextAction> with TickerProviderStateMixin, 
     );
   }
 }
+
+/// A balance, as an object rather than a readout.
+///
+/// This replaced a translucent-white capsule with a hairline border — the
+/// generic "glass chip" that every app built since about 2020 has on it. The
+/// problem with it in a game is not that it is ugly, it is that it is
+/// *weightless*: a wallet the player is meant to want to fill should look
+/// like a thing, in the same construction as everything else they can press.
+///
+/// So it is built the same way the play button is: a saturated face over a
+/// darker body, a dark outline around both, and the face sinks into the body
+/// under the finger. The optional stud is the shop affordance; only the coin
+/// pill carries one, because only coins can be bought.
+class StickerPill extends StatefulWidget {
+  const StickerPill({
+    super.key,
+    required this.icon,
+    required this.value,
+    required this.accent,
+    required this.deep,
+    required this.onTap,
+    this.trailingStud = false,
+    this.semanticLabel,
+  });
+
+  final DIcons icon;
+  final String value;
+  final Color accent;
+  final Color deep;
+  final VoidCallback onTap;
+  final bool trailingStud;
+  final String? semanticLabel;
+
+  @override
+  State<StickerPill> createState() => _StickerPillState();
+}
+
+class _StickerPillState extends State<StickerPill>
+    with TickerProviderStateMixin, PressMixin {
+  @override
+  Widget build(BuildContext context) {
+    final Widget pill = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => pressDown(),
+      onTapCancel: pressUp,
+      onTapUp: (_) => pressUp(),
+      onTap: () {
+        Fx.tap(context);
+        widget.onTap();
+      },
+      child: AnimatedBuilder(
+        animation: press,
+        builder: (BuildContext context, Widget? child) {
+          final double p = press.value.clamp(0.0, 1.0);
+          final double sink = DS.bevel * 0.6 * p;
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(DS.rPill),
+              color: widget.deep,
+              border: Border.all(color: DS.outline, width: 2),
+            ),
+            padding: EdgeInsets.only(top: sink, bottom: DS.bevel * 0.6 - sink),
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                DS.s12,
+                6,
+                widget.trailingStud ? 5 : DS.s12,
+                6,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(DS.rPill),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[
+                    Color.lerp(widget.accent, const Color(0xFFFFFFFF), 0.3)!,
+                    widget.accent,
+                  ],
+                ),
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            DIcon(widget.icon, size: 14, color: DS.outline),
+            const SizedBox(width: DS.s4),
+            Text(
+              widget.value,
+              style: Type.numeralSm.copyWith(fontSize: 14, color: DS.outline),
+            ),
+            if (widget.trailingStud) ...<Widget>[
+              const SizedBox(width: DS.s8),
+              Container(
+                width: 20,
+                height: 20,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: DS.outline.withValues(alpha: 0.22),
+                ),
+                child: const DIcon(DIcons.plus, size: 10, color: DS.outline),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    return widget.semanticLabel == null
+        ? pill
+        : Semantics(label: widget.semanticLabel, button: true, child: pill);
+  }
+}

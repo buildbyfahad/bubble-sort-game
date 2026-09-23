@@ -361,7 +361,13 @@ class _GameScreenState extends State<GameScreen> {
                         end: Alignment.bottomCenter,
                         colors: <Color>[DS.table, DS.tableEdge],
                       ),
-                      border: Border.all(color: DS.hairline),
+                      // The board is the one object the whole game is about,
+                      // and it was outlined in a 12%-white hairline — the
+                      // lightest edge in the build. It gets the same drawn
+                      // outline as everything else now, which is what makes it
+                      // read as a tray the vessels are standing in rather than
+                      // a rectangle they happen to be over.
+                      border: Border.all(color: DS.outline, width: DS.stroke),
                       boxShadow: <BoxShadow>[
                         BoxShadow(
                           color: DS.skyDeep.withValues(alpha: 0.5),
@@ -732,8 +738,11 @@ class _OutOfPoursSheet extends StatelessWidget {
 class _DockDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-        width: 1,
-        height: 30,
-        color: DS.hairlineStrong,
+        width: 2,
+        height: 26,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(DS.rPill),
+          color: DS.outline.withValues(alpha: 0.5),
+        ),
       );
 }

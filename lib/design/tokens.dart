@@ -11,50 +11,52 @@ class DS {
 
   // ---------------------------------------------------------------- surfaces
   //
-  // Dark ground, bright glass.
+  // Dark ground, low chroma, bright glass.
   //
-  // This went bright violet for a while, on an instruction to take it "full
-  // casual-bright". The reference the brief finally supplied says the
-  // opposite: the games in this specific genre — ball sort, water sort — are
-  // near-black with *clear* glass tubes and very glossy balls on top. The
-  // contrast is the whole product. Twelve saturated hues need somewhere dark
-  // to sit, and a bright ground spends the contrast budget on scenery.
+  // Three directions were tried before this one. Near-black with a single gold
+  // accent read as cold — a finance app containing a puzzle. Bright violet
+  // spent the whole contrast budget on scenery, leaving nothing for twelve
+  // saturated ball hues. Dark saturated violet was the compromise, and it had
+  // a problem neither of the others did.
   //
-  // So the ground is a deep indigo-black again. What survives from the bright
-  // pass is everything that was not the colour: the rounded face, the sunk
-  // buttons, the outlines, the sticker construction.
+  // Short wavelengths focus at a different depth from the rest of the
+  // spectrum, so a large field of saturated deep blue-violet gives the eye a
+  // focus it can never quite settle on. The last ground was hue 268 at 75%
+  // saturation across the entire screen, which is that exact colour, in a
+  // game people play in the dark before sleeping.
   //
-  // The original palette was near-black with a single gold accent, argued for
-  // on the grounds that the whole category is candy-on-white. It produced
-  // something genuinely sophisticated and, in play-testing, something that
-  // read as cold: a premium finance app that happened to contain a puzzle.
-  // A player who downloads a colour-sorting game to relax is not looking for
-  // restraint.
+  // So the base keeps its darkness and gives up its chroma: a cool slate that
+  // the eye can rest on. The colour is not gone, it has moved to where it
+  // costs nothing — the per-chapter [Atmosphere] washes, which are broad and
+  // soft and make no demand on focus, and the gold, which is small, warm and
+  // the only thing on screen asking to be pressed.
   //
-  // So: a bright violet ground, and dark panels floating on it. Panels stay
-  // dark deliberately — twelve ball hues have to stay separable, and every
-  // one of them reads more cleanly against a dark vessel than a light one.
-  // The brightness goes into the world behind the board, where it costs the
-  // puzzle nothing.
-  // Darkened from #8E6CFF. A gradient sky means text contrast varies by
-  // where on the screen it sits, and screen titles live at the very top —
-  // which was the lightest part of it.
-  static const Color skyTop = Color(0xFF2E1B5E);
-  static const Color skyMid = Color(0xFF1F1145);
-  static const Color skyDeep = Color(0xFF120926);
+  // Every value here is matched to the luminance of the colour it replaced,
+  // to within 1%. That was not the first attempt: dropping the saturation
+  // while keeping the same hex lightness produced a ground a third brighter
+  // than the old one, which quietly cost almost every ball 10% of its
+  // contrast — a palette that was easier to look at and harder to play on.
+  //
+  // Held at equal luminance, the change is free. Contrast against the balls
+  // is what it always was, and what the game gains is chroma separation: the
+  // ground moved from hue 256 at 75% saturation to hue 230 at 53%, so it is
+  // no longer sitting in the same colour family as Iris, Cobalt and Plum.
+  static const Color skyTop = Color(0xFF222841);
+  static const Color skyMid = Color(0xFF161A30);
+  static const Color skyDeep = Color(0xFF0C0E1A);
 
   /// The lit surface the vessels stand on. Without it they float in a void,
   /// which is most of why the board did not read as a place.
-  static const Color table = Color(0xFF241542);
-  static const Color tableEdge = Color(0xFF160C2C);
+  static const Color table = Color(0xFF181D32);
+  static const Color tableEdge = Color(0xFF0E1122);
 
-  /// `ink` is still the darkest ground — now used for panels and vessels
-  /// rather than for the whole screen.
-  static const Color ink = Color(0xFF231447);
-  static const Color inkDeep = Color(0xFF160B30);
-  static const Color surface = Color(0xFF2C1A5C);
-  static const Color surfaceRaised = Color(0xFF3A2472);
-  static const Color surfaceHigh = Color(0xFF4A3090);
+  /// `ink` is the darkest ground — used for panels and vessels rather than
+  /// for the whole screen.
+  static const Color ink = Color(0xFF191E33);
+  static const Color inkDeep = Color(0xFF0D1020);
+  static const Color surface = Color(0xFF1F2540);
+  static const Color surfaceRaised = Color(0xFF2C3352);
+  static const Color surfaceHigh = Color(0xFF3C4670);
 
   /// Hairline used on card and vessel edges.
   static const Color hairline = Color(0x1FFFFFFF);
@@ -78,10 +80,11 @@ class DS {
 
   // -------------------------------------------------------------------- text
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFDCD2FF);
-  // Lifted from #9585D8: on a near-black ground a dim grey-violet reads as
-  // "quiet"; on a bright violet one it reads as "broken".
-  static const Color textTertiary = Color(0xFFB9ABF2);
+  static const Color textSecondary = Color(0xFFD3DAEE);
+  // Lifted from #9585D8: a dim tertiary reads as "quiet" on near-black and
+  // as "broken" on anything brighter. This sits above the ground by enough
+  // to be legible at 12pt without competing with the primary.
+  static const Color textTertiary = Color(0xFFA4AECB);
   static const Color textOnGold = Color(0xFF4A3000);
 
   // ---------------------------------------------------------------- on light
@@ -91,17 +94,17 @@ class DS {
   // lighter than it, with nothing usable in between. Dark panels were the
   // first choice; these are the inks for the other one.
   static const Color card = Color(0xFFFFFFFF);
-  static const Color cardSoft = Color(0xFFF3EFFF);
-  static const Color cardEdge = Color(0xFFE2D9FF);
+  static const Color cardSoft = Color(0xFFF2F4FB);
+  static const Color cardEdge = Color(0xFFDCE1EF);
 
   /// The body a card's face sits on, showing as a thick bottom edge. Same
   /// idea as a button's bevel: it is what makes a surface read as an object
   /// rather than a rectangle of colour.
-  static const Color cardUnder = Color(0xFFC3B2F0);
+  static const Color cardUnder = Color(0xFFBCC4DE);
 
-  static const Color inkStrong = Color(0xFF241557);
-  static const Color inkBody = Color(0xFF4B3A8C);
-  static const Color inkSoft = Color(0xFF8577C4);
+  static const Color inkStrong = Color(0xFF1C2340);
+  static const Color inkBody = Color(0xFF414A6B);
+  static const Color inkSoft = Color(0xFF7C86A5);
 
   // ------------------------------------------------------------ bubble palette
   //
@@ -120,7 +123,7 @@ class DS {
     // Pushed well into magenta so it never collides with Vermilion, which is
     // the only pair in this set close enough to be a problem.
     BubbleHue('Rose', Color(0xFFDD54A4), Color(0xFF9C2C6E), Color(0xFFF294CD), HueGlyph.chevron),
-    BubbleHue('Slate', Color(0xFF7A88A4), Color(0xFF48536A), Color(0xFFAFBACF), HueGlyph.square),
+    BubbleHue('Slate', Color(0xFF94A3BE), Color(0xFF5A6780), Color(0xFFC6D0E0), HueGlyph.square),
 
     // --- second rank -------------------------------------------------------
     //
@@ -132,10 +135,16 @@ class DS {
     // and Plum is a dark wine rather than a dark violet - a violet would sit
     // right on top of Iris, which was the weakest pair in the first cut of
     // this palette. Colour assist carries the rest of the load.
+    //
+    // Slate, Cobalt and Plum were all lifted when the ground lost its chroma.
+    // Slate is a desaturated blue-grey and Cobalt a dark blue, which is the
+    // ground's own family now; Plum was the darkest ball in the set and was
+    // disappearing into it. All three are lighter than the ground by a clear
+    // margin rather than a narrow one.
     BubbleHue('Teal', Color(0xFF2189A8), Color(0xFF0D5A72), Color(0xFF77C2D8), HueGlyph.arc),
     BubbleHue('Sand', Color(0xFFD9BC8E), Color(0xFF9A7C51), Color(0xFFF0DCBC), HueGlyph.dash),
-    BubbleHue('Cobalt', Color(0xFF3C5FC4), Color(0xFF213A86), Color(0xFF8496E8), HueGlyph.star),
-    BubbleHue('Plum', Color(0xFF7B3B5E), Color(0xFF491B33), Color(0xFFBA7C9B), HueGlyph.hex),
+    BubbleHue('Cobalt', Color(0xFF4A6BD4), Color(0xFF26409A), Color(0xFF8FA1EE), HueGlyph.star),
+    BubbleHue('Plum', Color(0xFF9B4A75), Color(0xFF5E2445), Color(0xFFCB8CAE), HueGlyph.hex),
   ];
 
 
@@ -176,24 +185,23 @@ class DS {
   /// the outline it is just a coloured rectangle. Thick enough to read as a
   /// drawn edge rather than a border.
   static const double stroke = 2.5;
-  static const Color outline = Color(0xFF1B0E3D);
+  static const Color outline = Color(0xFF0D1124);
 
   // ------------------------------------------------------------------ shadows
   //
   // Shadows are tinted toward the background hue and kept wide + low opacity.
   // Two layers each: a tight contact shadow and a broad ambient one. Hard
   // black drop-shadows are the single fastest way to look like 2015.
-  // Tinted toward the violet ground rather than black. A black shadow on a
-  // coloured background is the fastest way to make a bright palette look
-  // muddy.
+  // Tinted toward the ground rather than pure black, which on a coloured
+  // background is the fastest way to look muddy.
   static List<BoxShadow> get e1 => const <BoxShadow>[
-        BoxShadow(color: Color(0x381A0A45), blurRadius: 10, offset: Offset(0, 4)),
-        BoxShadow(color: Color(0x22140538), blurRadius: 28, offset: Offset(0, 12)),
+        BoxShadow(color: Color(0x3D080B18), blurRadius: 10, offset: Offset(0, 4)),
+        BoxShadow(color: Color(0x26060812), blurRadius: 28, offset: Offset(0, 12)),
       ];
 
   static List<BoxShadow> get e2 => const <BoxShadow>[
-        BoxShadow(color: Color(0x4A1A0A45), blurRadius: 18, offset: Offset(0, 8)),
-        BoxShadow(color: Color(0x33140538), blurRadius: 44, offset: Offset(0, 20)),
+        BoxShadow(color: Color(0x52080B18), blurRadius: 18, offset: Offset(0, 8)),
+        BoxShadow(color: Color(0x38060812), blurRadius: 44, offset: Offset(0, 20)),
       ];
 
   static List<BoxShadow> glow(Color c, {double opacity = 0.34, double blur = 34, double y = 10}) =>
@@ -244,7 +252,14 @@ class Atmosphere {
   final Color cool;
   final Color deep;
 
-  static const Atmosphere menu = Atmosphere('Menu', DS.gold, DS.aqua, Color(0xFF6B5BD8));
+  /// The warm field is orange rather than gold.
+  ///
+  /// A yellow glow over a desaturated blue-slate ground mixes to olive, which
+  /// is the one thing the menu's top corner must not look like. Pushed toward
+  /// orange it reads as warm light instead. The deep field moved with the
+  /// ground, from violet to indigo.
+  static const Atmosphere menu =
+      Atmosphere('Menu', Color(0xFFFF9E4D), DS.aqua, Color(0xFF5B6BD8));
 
   /// Cycled by chapter. Six is enough that neighbouring chapters never
   /// share one and a returning player can still place a chapter by its light.

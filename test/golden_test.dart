@@ -8,6 +8,7 @@ import 'package:bubble_sort/ui/screens/level_complete.dart';
 
 import 'package:bubble_sort/ui/screens/collection_screen.dart';
 import 'package:bubble_sort/ui/screens/daily_sheet.dart';
+import 'package:bubble_sort/ui/screens/home_screen.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
 import 'package:bubble_sort/ui/screens/shop_sheet.dart';
 import 'package:bubble_sort/ui/screens/settings_sheet.dart';
@@ -47,14 +48,47 @@ void main() {
     await drainTimers(tester);
   });
 
+  // These two used to render [LevelsScreen].
+  //
+  // They were pointed at the road during the spell when the road *was* the
+  // home screen, and never pointed back when the menu was restored. The
+  // consequence was not a wrong picture, it was no picture: the first screen
+  // of the game had no golden coverage at all, which is a large part of how it
+  // survived three rounds of visual work untouched. The road keeps its own
+  // goldens below.
   renderTest('home — fresh install', (WidgetTester tester) async {
     useHandset(tester);
-    await tester.pumpWidget(harness(await buildScope(child: const LevelsScreen())));
+    await tester.pumpWidget(harness(await buildScope(child: const HomeScreen())));
     await settle(tester);
     await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/home_fresh.png'));
   });
 
   renderTest('home — mid progress', (WidgetTester tester) async {
+    useHandset(tester);
+    await tester.pumpWidget(harness(await buildScope(
+      child: const HomeScreen(),
+      prefs: <String, Object>{
+        'progress.best.1': 3,
+        'progress.best.2': 6,
+        'progress.best.3': 9,
+        'progress.best.4': 12,
+        'progress.hints': 5,
+        'progress.seenTutorial': true,
+        'wallet.coins': 240,
+      },
+    )));
+    await settle(tester);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/home_progress.png'));
+  });
+
+  renderTest('road — fresh install', (WidgetTester tester) async {
+    useHandset(tester);
+    await tester.pumpWidget(harness(await buildScope(child: const LevelsScreen())));
+    await settle(tester);
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/road_fresh.png'));
+  });
+
+  renderTest('road — mid progress', (WidgetTester tester) async {
     useHandset(tester);
     await tester.pumpWidget(harness(await buildScope(
       child: const LevelsScreen(),
@@ -68,7 +102,7 @@ void main() {
       },
     )));
     await settle(tester);
-    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/home_progress.png'));
+    await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/road_progress.png'));
   });
 
   renderTest('game — first level with tutorial', (WidgetTester tester) async {

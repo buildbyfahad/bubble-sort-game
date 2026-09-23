@@ -42,6 +42,44 @@ flutter test --update-goldens test/screenshots_test.dart    # regenerate
 
 ---
 
+## Colour
+
+The ground is dark, and deliberately low in chroma.
+
+Three palettes came before this one. Near-black with a single gold accent was
+genuinely sophisticated and read as cold — a finance app that happened to
+contain a puzzle. Bright violet spent the entire contrast budget on scenery,
+leaving nothing for twelve saturated ball hues. Dark saturated violet was the
+compromise, and it had a problem the other two did not: short wavelengths focus
+at a different depth from the rest of the spectrum, so a large field of
+saturated deep blue-violet gives the eye a focus it never quite settles on.
+That ground was hue 256 at 75% saturation across the whole screen, in a game
+people play in the dark before sleeping.
+
+So the base gave up its chroma and kept its darkness — hue 230 at 53%. The
+colour is not gone; it moved to the per-chapter [`Atmosphere`](lib/design/tokens.dart)
+washes, which are broad and soft and make no demand on focus, and to the gold,
+which is small, warm and the only thing on screen asking to be pressed.
+
+The important part is that **every ground value is matched to the luminance of
+the colour it replaced, to within 1%**. That was not the first attempt.
+Dropping saturation while keeping the same hex lightness produced a ground a
+third brighter than the old one, which quietly cost almost every ball 10% of
+its contrast — a palette easier to look at and harder to play on. Held at equal
+luminance the change is free:
+
+| ball vs. ground | before | after |
+|---|---|---|
+| nine unchanged hues | — | identical |
+| Slate | 4.81 | **6.73** |
+| Cobalt | 2.96 | **3.55** |
+| Plum | 2.15 | **2.96** |
+| gold (the action colour) | 11.17 | 11.16 |
+
+Slate, Cobalt and Plum were lifted because they are the three hues nearest the
+ground's own family; Plum was the darkest ball in the set and was disappearing
+into it.
+
 ## Running it
 
 The Flutter SDK lives at `~/development/flutter` on this machine.

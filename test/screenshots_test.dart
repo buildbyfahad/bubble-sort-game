@@ -5,6 +5,7 @@ import 'package:bubble_sort/engine/solver.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
 
 import 'package:bubble_sort/ui/screens/level_complete.dart';
+import 'package:bubble_sort/ui/screens/home_screen.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
 import 'package:bubble_sort/ui/widgets/tube.dart';
 import 'package:flutter/widgets.dart';
@@ -56,10 +57,12 @@ Map<String, Object> _progressed({int upTo = 27}) {
 void main() {
   setUpAll(loadAppFonts);
 
+  // Shot 01 used to render [LevelsScreen] as well, so the README carried the
+  // same picture twice under two captions.
   renderTest('01 — home', (WidgetTester tester) async {
     useHandset(tester);
     await tester.pumpWidget(harness(await buildScope(
-      child: const LevelsScreen(),
+      child: const HomeScreen(),
       prefs: _progressed(),
     )));
     await settle(tester, steps: 30);

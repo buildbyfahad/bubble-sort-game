@@ -166,10 +166,12 @@ class _BrandMarkPainter extends CustomPainter {
             body.topCenter,
             body.bottomCenter,
             <Color>[
-              // Re-tinted violet to match the sky the mark now sits on. The
-              // old slate-blue glass read as drab grey against it.
-              const Color(0xFF4C3A86),
-              const Color(0xFF241547),
+              // Tracks the sky. This was slate-blue, then violet when the
+              // ground went violet, and is cool again now the ground is —
+              // at the same luminance as the violet it replaces, so only the
+              // hue moved.
+              const Color(0xFF39437A),
+              const Color(0xFF191D36),
             ],
           ),
       );

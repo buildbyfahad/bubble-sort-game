@@ -59,16 +59,13 @@ class CollectionScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const DIcon(DIcons.coin, size: 14, color: DS.gold),
-                        const SizedBox(width: DS.s4),
-                        Text(
-                          '${scope.wallet.coins}',
-                          style: Type.numeralSm.copyWith(fontSize: 14, color: DS.gold),
-                        ),
-                      ],
+                    StickerPill(
+                      icon: DIcons.coin,
+                      value: '${scope.wallet.coins}',
+                      accent: DS.gold,
+                      deep: DS.goldDeep,
+                      semanticLabel: 'Coins',
+                      onTap: () {},
                     ),
                   ],
                 ),
@@ -185,9 +182,13 @@ class _CardState extends State<_Card> with TickerProviderStateMixin, PressMixin 
     final bool chapterDone = item.unlockChapter != null &&
         scope.progress.isCleared(scope.catalog.chapterByNumber(item.unlockChapter!).to);
 
-    final Color edge = equipped
-        ? DS.gold.withValues(alpha: 0.7)
-        : (owned ? DS.aqua.withValues(alpha: 0.3) : DS.hairline);
+    // Three states, three constructions — not one construction at three
+    // opacities. Equipped is a gold-outlined sticker that glows; owned is the
+    // same sticker in the neutral outline; locked loses the bevel entirely and
+    // becomes a recess, so it reads as *not an object you can pick up* before
+    // any of its text is read.
+    final Color edge = equipped ? DS.gold : DS.outline;
+    final bool solid = owned || affordable;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -200,24 +201,34 @@ class _CardState extends State<_Card> with TickerProviderStateMixin, PressMixin 
         builder: (BuildContext context, _) => Transform.scale(
           scale: 1 - press.value.clamp(0.0, 1.0) * 0.04,
           child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(DS.rMd + 2),
+              color: equipped ? DS.goldDeep : DS.outline,
+              border: Border.all(color: edge, width: DS.stroke),
+              boxShadow: equipped
+                  ? DS.glow(DS.goldDeep, opacity: 0.28, blur: 24, y: 8)
+                  : (solid ? DS.e1 : null),
+            ),
+            padding: EdgeInsets.only(bottom: solid ? DS.bevel : 0),
+            child: Container(
             padding: const EdgeInsets.all(DS.s12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(DS.rMd),
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: <Color>[DS.surfaceRaised, DS.surface],
+                colors: solid
+                    ? const <Color>[DS.surfaceRaised, DS.surface]
+                    : const <Color>[DS.inkDeep, DS.inkDeep],
               ),
-              border: Border.all(color: edge, width: equipped ? 1.5 : 1),
-              boxShadow: equipped ? DS.glow(DS.goldDeep, opacity: 0.16, blur: 20, y: 6) : DS.e1,
             ),
             child: Column(
               children: <Widget>[
                 Expanded(child: Center(child: _Preview(item: item, scope: scope))),
                 const SizedBox(height: DS.s8),
-                Text(item.name, style: Type.bodyStrong.copyWith(fontSize: 14)),
+                Text(item.name, style: Type.bodyStrong.copyWith(fontSize: 14, color: DS.textPrimary)),
                 const SizedBox(height: 2),
-                Text(item.blurb, style: Type.captionInk.copyWith(fontSize: 11.5)),
+                Text(item.blurb, style: Type.caption.copyWith(fontSize: 11.5)),
                 const SizedBox(height: DS.s8),
                 _Status(
                   item: item,
@@ -227,6 +238,7 @@ class _CardState extends State<_Card> with TickerProviderStateMixin, PressMixin 
                   chapterDone: chapterDone,
                 ),
               ],
+            ),
             ),
           ),
         ),
@@ -297,23 +309,24 @@ class _Status extends StatelessWidget {
   Widget build(BuildContext context) {
     if (equipped) return _pill('EQUIPPED', DS.gold, icon: DIcons.check);
     if (owned) return _pill('TAP TO EQUIP', DS.aqua);
+
     if (item.isChapterReward) {
       return _pill(
         chapterDone ? 'CHAPTER ${item.unlockChapter}' : 'FINISH CHAPTER ${item.unlockChapter}',
-        DS.inkSoft,
+        DS.textTertiary,
         icon: DIcons.lock,
       );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        DIcon(DIcons.coin, size: 12, color: affordable ? DS.goldDeep : DS.inkSoft),
+        DIcon(DIcons.coin, size: 12, color: affordable ? DS.gold : DS.textTertiary),
         const SizedBox(width: DS.s4),
         Text(
           '${item.price}',
           style: Type.numeralSm.copyWith(
             fontSize: 13,
-            color: affordable ? DS.goldDeep : DS.inkSoft,
+            color: affordable ? DS.gold : DS.textTertiary,
           ),
         ),
       ],
@@ -324,7 +337,7 @@ class _Status extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (icon != null) ...<Widget>[DIcon(icon, size: 10, color: c), const SizedBox(width: DS.s4)],
-          Text(text, style: Type.labelInk.copyWith(color: c, fontSize: 9.5, letterSpacing: 1.2)),
+          Text(text, style: Type.label.copyWith(color: c, fontSize: 9.5, letterSpacing: 1.2)),
         ],
       );
 }

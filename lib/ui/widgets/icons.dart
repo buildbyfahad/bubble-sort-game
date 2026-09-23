@@ -9,7 +9,7 @@ import 'package:flutter/widgets.dart';
 /// weight. These are all built on one grid with one stroke width, round caps
 /// and round joins, so they read as a family and match the rounded geometry of
 /// the vessels and buttons.
-enum DIcons { back, settings, undo, hint, restart, close, next, lock, check, sound, mute, grid, map, music, vibrate, eye, coin, flame, play }
+enum DIcons { back, settings, undo, hint, restart, close, next, lock, check, sound, mute, grid, map, music, vibrate, eye, coin, flame, play, plus }
 
 class DIcon extends StatelessWidget {
   const DIcon(this.icon, {super.key, this.size = 22, this.color = const Color(0xFFF2F4F8), this.weight = 1.9});
@@ -115,6 +115,18 @@ class _IconPainter extends CustomPainter {
       case DIcons.close:
         canvas.drawLine(p(6.5, 6.5), p(17.5, 17.5), stroke);
         canvas.drawLine(p(17.5, 6.5), p(6.5, 17.5), stroke);
+
+      // The shop affordance on the coin pill. Heavier than the other strokes
+      // on purpose: at 10pt inside a stud, a 1.9-weight cross reads as a
+      // smudge rather than a plus.
+      case DIcons.plus:
+        final Paint thick = Paint()
+          ..color = color
+          ..strokeWidth = 3.1 * u
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(p(12, 6), p(12, 18), thick);
+        canvas.drawLine(p(6, 12), p(18, 12), thick);
 
       case DIcons.check:
         canvas.drawPath(

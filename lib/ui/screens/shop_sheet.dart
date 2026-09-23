@@ -89,9 +89,9 @@ class _ShopSheetState extends State<ShopSheet> {
                     Row(
                       children: <Widget>[
                         Expanded(child: Text('Hints', style: Type.titleMd)),
-                        _Balance(icon: DIcons.coin, value: w.coins, accent: DS.gold),
+                        _Balance(icon: DIcons.coin, value: w.coins, accent: DS.goldDeep),
                         const SizedBox(width: DS.s12),
-                        _Balance(icon: DIcons.hint, value: w.hints, accent: DS.aqua),
+                        _Balance(icon: DIcons.hint, value: w.hints, accent: DS.aquaDeep),
                         const SizedBox(width: DS.s8),
                         GhostIconButton(
                           icon: DIcons.close,
@@ -133,7 +133,7 @@ class _ShopSheetState extends State<ShopSheet> {
                         label: _watching ? 'Loading…' : 'Watch a video',
                         detail: 'Earn 40 coins',
                         icon: DIcons.coin,
-                        accent: DS.gold,
+                        accent: DS.goldDeep,
                         enabled: !_watching,
                         onTap: () => _watch(scope, coins: 40, hints: 0),
                       ),
@@ -142,7 +142,7 @@ class _ShopSheetState extends State<ShopSheet> {
                         label: _watching ? 'Loading…' : 'Watch a video',
                         detail: 'Earn one hint',
                         icon: DIcons.hint,
-                        accent: DS.aqua,
+                        accent: DS.aquaDeep,
                         enabled: !_watching,
                         onTap: () => _watch(scope, coins: 0, hints: 1),
                       ),
@@ -176,13 +176,21 @@ class _Balance extends StatelessWidget {
   final Color accent;
 
   @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          DIcon(icon, size: 15, color: accent),
-          const SizedBox(width: DS.s4),
-          Text('$value', style: Type.numeralSm.copyWith(fontSize: 15, color: accent)),
-        ],
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: DS.s8, vertical: 3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(DS.rPill),
+          color: accent.withValues(alpha: 0.12),
+          border: Border.all(color: accent.withValues(alpha: 0.3), width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            DIcon(icon, size: 14, color: accent),
+            const SizedBox(width: DS.s4),
+            Text('$value', style: Type.numeralSm.copyWith(fontSize: 14, color: accent)),
+          ],
+        ),
       );
 }
 
@@ -246,14 +254,24 @@ class _ShopRowState extends State<_ShopRow> with TickerProviderStateMixin, Press
             offset: Offset(dx, 0),
             child: Transform.scale(
               scale: 1 - press.value.clamp(0.0, 1.0) * 0.02,
+              // A 3%-white fill over a white card is, by construction, almost
+              // exactly the card. These rows were invisible as objects: the
+              // only thing separating one from the next was a hairline. Now
+              // each is a tinted face on a body, with the bevel dropped when
+              // it cannot be afforded — so an unaffordable bundle is flat and
+              // an affordable one stands up.
               child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(DS.rMd + 2),
+                  color: widget.affordable ? DS.cardUnder : DS.cardEdge,
+                  border: Border.all(color: DS.cardUnder, width: 2),
+                ),
+                padding: EdgeInsets.only(bottom: widget.affordable ? 3 : 0),
+                child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(DS.rMd),
-                  color: const Color(0x08FFFFFF),
-                  border: Border.all(
-                    color: widget.affordable ? DS.hairlineStrong : DS.hairline,
-                  ),
+                  color: widget.affordable ? DS.card : DS.cardSoft,
                 ),
                 child: Row(
                   children: <Widget>[
@@ -292,6 +310,7 @@ class _ShopRowState extends State<_ShopRow> with TickerProviderStateMixin, Press
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             ),
@@ -336,8 +355,8 @@ class _WatchRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(DS.rMd),
-              color: accent.withValues(alpha: 0.07),
-              border: Border.all(color: accent.withValues(alpha: 0.22)),
+              color: accent.withValues(alpha: 0.10),
+              border: Border.all(color: accent.withValues(alpha: 0.38), width: 2),
             ),
             child: Row(
               children: <Widget>[
@@ -364,7 +383,7 @@ class _WatchRow extends StatelessWidget {
 class _Rule extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
-      Container(height: 1, color: DS.cardEdge);
+      Container(height: 2, color: DS.cardEdge);
 }
 
 class _OrLabel extends StatelessWidget {
