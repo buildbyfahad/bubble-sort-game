@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsService extends ChangeNotifier {
   SettingsService._(this._prefs)
       : _sound = _prefs.getBool(_kSound) ?? true,
-        _music = _prefs.getBool(_kMusic) ?? true,
+        _music = _prefs.getBool(_kMusic) ?? false,
         _haptics = _prefs.getBool(_kHaptics) ?? true,
         _colorAssist = _prefs.getBool(_kColorAssist) ?? false;
 
@@ -26,9 +26,15 @@ class SettingsService extends ChangeNotifier {
 
   bool get sound => _sound;
 
-  /// The ambient loop. Split from [sound] on purpose: a great many players
-  /// want the board's cues and not a score, and forcing that choice through
-  /// one switch means they turn everything off.
+  /// The score. Split from [sound] on purpose: a great many players want the
+  /// board's cues and not a score, and forcing that choice through one switch
+  /// means they turn everything off.
+  ///
+  /// **Off by default.** The effects are now real recorded samples; the music
+  /// is still synthesised by `tools/gen_audio.py` and sounds it. Silence is
+  /// better than a loop the player wants to escape, so this waits until it is
+  /// asked for — or until a composed track replaces the stems, which drops
+  /// straight into the same four-stem system.
   bool get music => _music;
 
   bool get haptics => _haptics;

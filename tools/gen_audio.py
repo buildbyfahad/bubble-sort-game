@@ -1,19 +1,16 @@
-"""Procedural sound design for Bubble Sort.
+"""Procedural MUSIC for Bubble Sort.
 
-Every cue is synthesised here rather than sourced, so the whole palette is
-original and tuned as one instrument. The house style:
+This script used to generate every sound in the game. It no longer does: the
+effects are built by `build_audio.py` from CC0 sample packs, because three
+passes of synthesis and three rounds of "the sounds are still bad" made the
+verdict clear — a Python script making oscillators cannot compete with
+recorded and designed samples.
 
-  * Pitched material comes from one scale (D major pentatonic) so no two cues
-    can ever clash, whatever order they fire in.
-  * Everything pitched is an FM bell or a plucked string, not a raw sine. A
-    sine with an envelope on it is the sound of a prototype; a bell has
-    inharmonic partials that decay at different rates, which is what the ear
-    reads as "an object was struck".
-  * Everything goes through a plate reverb before mastering. A dry cue sounds
-    like it is coming out of the phone; a cue with a short tail sounds like it
-    is happening somewhere.
-  * Soft-clip saturation on the master, then peak normalise. This is what
-    stops the loud cues sounding thin next to the quiet ones.
+What remains here is the four-stem score, which is still synthesised for want
+of a CC0 music loop whose licence could be verified. It is the weakest audio
+in the product and the music setting is off by default because of it. The
+stems are interchangeable: any four loops of equal length and tempo, named
+music_pad / music_bass / music_drums / music_melody, drop straight in.
 
 Run:  python3 tools/gen_audio.py
 """

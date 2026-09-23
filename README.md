@@ -99,7 +99,7 @@ tools/
 
 assets/
   fonts/                     Baloo 2 (variable) + its OFL licence
-  audio/                     21 synthesised cues + four 20s music stems
+  audio/                     24 CC0 cues + four synthesised music stems
   levels/levels.json         1000 generated levels (~103 KB)
 ```
 
@@ -239,13 +239,35 @@ source: components must fire their own feedback, screens must not play raw
 interface cues, and every `Fx` method must do both halves. It is a rule about
 where code lives, and no runtime assertion can catch it being broken.
 
-The interface cues were also rebuilt. The old ones were designed so that a
-menu tap never announced itself — correct for an app, wrong for a game, where
-the interface noises are part of the toy. Each is now a *pop*: a pitched body
-with a real transient and a downward pitch bend, an octave apart so the
-vocabulary is legible by ear. They are about seven times louder than before.
+The cues themselves are no longer synthesised. They are CC0 samples from
+[Kenney](https://kenney.nl) — Interface Sounds, Impact Sounds and Music
+Jingles — assembled by
+[`tools/build_audio.py`](tools/build_audio.py). Creative Commons Zero: free
+for commercial use with no attribution required, and the licence ships in
+`assets/audio/`.
+
+Three passes of procedural synthesis, and three rounds of "the sounds are
+still bad", made the verdict clear: a Python script making oscillators cannot
+compete with recorded and designed samples. Two details in the build:
+
+- **Balls landing use actual glass impacts**, which is what is happening on
+  screen.
+- **The eight seal cues are one struck bell**, resampled up a scale. Because
+  it is literally the same hit, the set is coherent in a way eight separately
+  chosen samples never would be — and because resampling moves pitch and
+  length together, a higher one is also a shorter one, exactly as a smaller
+  struck object behaves.
+
+The packs ship Ogg Vorbis, which Android plays and iOS does not, so the build
+converts everything to 16-bit PCM using macOS's own `afconvert`.
 
 ## The score
+
+**Off by default.** The effects are real samples now; the music is still
+synthesised and sounds it, and silence is better than a loop the player wants
+to escape. The stems are interchangeable — any four loops of equal length and
+tempo drop straight in, which is the one piece of audio worth paying a
+composer for.
 
 Not one loop but four — pad, bass, drums, melody — at 96 BPM over eight bars,
 and the board decides how many are audible. Pad alone on the menu; each
