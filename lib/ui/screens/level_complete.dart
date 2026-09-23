@@ -208,12 +208,39 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
     return SafeArea(
       child: Stack(
         children: <Widget>[
+          // Paper, thrown once, behind everything.
+          //
+          // The top half of this screen was empty. The composition argument
+          // for putting the crest there was right, but a mark alone in a void
+          // is a *statement* about the result rather than a celebration of it,
+          // and this is the screen the player sees more than any other. The
+          // confetti costs one painter and is the difference between the game
+          // announcing a win and the game reacting to one.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _c,
+                  builder: (BuildContext context, _) => CustomPaint(
+                    painter: _ConfettiPainter(t: _c.value, rank: grade.rank, accent: grade.color),
+                  ),
+                ),
+              ),
+            ),
+          ),
           Padding(
         padding: const EdgeInsets.fromLTRB(DS.s16, DS.s16, DS.s16, DS.s16),
         child: Column(
           children: <Widget>[
             Expanded(
-              child: Center(
+              // Low-centred, not centred. Once the confetti and the rays have
+              // gone the upper third is empty ground, and a mark floating in
+              // the middle of it leaves that emptiness on both sides. Dropped
+              // toward the card, the crest and the verdict read as one block
+              // sitting on it, and the empty space collects at the top edge
+              // where it works as air rather than as a gap.
+              child: Align(
+                alignment: const Alignment(0, 0.42),
                 child: AnimatedBuilder(
                   key: _crestKey,
                   animation: _c,
@@ -348,7 +375,10 @@ class _CrestPainter extends CustomPainter {
 
     // --- the burst behind the seal ----------------------------------------
     final double burst = Curves.easeOutCubic.transform((t / 0.5).clamp(0.0, 1.0));
-    final double burstFade = 1 - (t / 0.85).clamp(0.0, 1.0);
+    // Floors at 0.30 rather than fading to nothing. The burst is the only
+    // light source behind the seal, and letting it go out entirely is what
+    // left the settled screen looking like a mark on a flat wall.
+    final double burstFade = 1 - 0.70 * (t / 0.85).clamp(0.0, 1.0);
     if (burstFade > 0) {
       final double br = r * (1.0 + burst * 1.5);
       canvas.drawCircle(
@@ -377,9 +407,14 @@ class _CrestPainter extends CustomPainter {
         ..shader = ui.Gradient.linear(
           Offset(c.dx, c.dy - r),
           Offset(c.dx, c.dy + r),
+          // Was surfaceHigh barely tinted toward the accent, over surface:
+          // a dark disc with a small gold glyph on it, which at a glance
+          // reads as a clock face. The seal is the reward and has to be the
+          // brightest object on the screen, so the face is the grade's own
+          // colour and the vessel inside it is cut out dark.
           <Color>[
-            Color.lerp(DS.surfaceHigh, accent, 0.20)!,
-            DS.surface,
+            Color.lerp(accent, const Color(0xFFFFFFFF), 0.34)!,
+            Color.lerp(accent, DS.inkDeep, 0.18)!,
           ],
         ),
     );
@@ -395,7 +430,7 @@ class _CrestPainter extends CustomPainter {
           c + Offset(math.cos(a), math.sin(a)) * (r * 1.08),
           Paint()
             ..strokeWidth = 1.4
-            ..color = accent.withValues(alpha: i.isEven ? 0.34 : 0.14),
+            ..color = DS.outline.withValues(alpha: i.isEven ? 0.55 : 0.25),
         );
       }
     }
@@ -405,8 +440,8 @@ class _CrestPainter extends CustomPainter {
       r,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0 + rank * 0.6
-        ..color = accent.withValues(alpha: 0.85),
+        ..strokeWidth = DS.stroke + rank * 0.6
+        ..color = DS.outline,
     );
     canvas.drawCircle(
       c,
@@ -414,7 +449,7 @@ class _CrestPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0
-        ..color = accent.withValues(alpha: 0.28),
+        ..color = DS.outline.withValues(alpha: 0.30),
     );
 
     // --- the vessel at the centre -----------------------------------------
@@ -438,7 +473,7 @@ class _CrestPainter extends CustomPainter {
       bottomRight: Radius.circular(vw * 0.46),
     );
 
-    canvas.drawRRect(vessel, Paint()..color = DS.inkDeep.withValues(alpha: 0.55));
+    canvas.drawRRect(vessel, Paint()..color = DS.inkDeep.withValues(alpha: 0.82));
 
     // Balls, not a flat fill.
     //
@@ -468,9 +503,9 @@ class _CrestPainter extends CustomPainter {
             Offset(bc.dx - br * 0.3, bc.dy - br * 0.38),
             br * 1.25,
             <Color>[
-              Color.lerp(accent, const Color(0xFFFFFFFF), 0.45)!,
-              accent,
-              Color.lerp(accent, DS.inkDeep, 0.55)!,
+              const Color(0xFFFFFFFF),
+              Color.lerp(accent, const Color(0xFFFFFFFF), 0.55)!,
+              Color.lerp(accent, DS.inkDeep, 0.30)!,
             ],
             <double>[0.0, 0.5, 1.0],
           ),
@@ -483,7 +518,7 @@ class _CrestPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.6
-        ..color = accent.withValues(alpha: 0.8),
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45),
     );
   }
 
@@ -631,24 +666,54 @@ class _ResultCard extends StatelessWidget {
               ),
             ),
           ],
+          // Chapter progress, not "2.8%".
+          //
+          // This row used to read PROGRESS / 2.8%, which is the same dashboard
+          // number the menu led with until it was taken off there — and it is
+          // worse here, because the moment the player has just won is the
+          // moment the game chooses to tell them they have done almost none of
+          // it. A thousand-level total can only ever produce a demoralising
+          // fraction. The chapter they are actually in is forty levels long,
+          // the bar visibly moves every single clear, and finishing one is a
+          // real event with a cosmetic behind it.
           if (!daily) ...<Widget>[
             const SizedBox(height: DS.s20),
-            Row(
-              children: <Widget>[
-                Text('PROGRESS', style: Type.labelInk),
-                const Spacer(),
-                Text(
-                  '${(overallAfter * 100).toStringAsFixed(1)}%',
-                  style: Type.labelInk.copyWith(color: DS.inkBody),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.s8),
-            _DelayedProgress(
-              animation: animation,
-              from: overallBefore,
-              to: overallAfter,
-              start: 0.42,
+            Builder(
+              builder: (BuildContext context) {
+                final Chapter ch = AppScope.of(context).catalog.chapterOf(level.id);
+                final int done = level.id - ch.from + 1;
+                final int size = ch.to - ch.from + 1;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          'CHAPTER ${ch.number.toString().padLeft(2, '0')} · ${ch.name.toUpperCase()}',
+                          style: Type.labelInk,
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$done / $size',
+                          style: Type.numeralSm.copyWith(fontSize: 13, color: DS.inkBody),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.s8),
+                    _DelayedProgress(
+                      animation: animation,
+                      from: (done - 1) / size,
+                      to: done / size,
+                      start: 0.42,
+                      // Gold, not the grade's colour. How far through the
+                      // chapter the player is has nothing to do with how well
+                      // they solved this board — and a "Solved" grade is
+                      // silver, which on a white card made the bar disappear.
+                      color: DS.gold,
+                    ),
+                  ],
+                );
+              },
             ),
           ],
           const SizedBox(height: DS.s20),
@@ -766,20 +831,24 @@ class _Reward extends StatelessWidget {
             child: Transform.scale(
               scale: 0.8 + e * 0.2,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s8),
+                // A 10%-alpha tint on a near-white card made the payout the
+                // lowest-contrast thing on it. Solid, outlined and bevelled:
+                // what the player won should look like something won.
+                padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: 7),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(DS.rPill),
-                  color: accent.withValues(alpha: 0.10),
-                  border: Border.all(color: accent.withValues(alpha: 0.28)),
+                  color: accent,
+                  border: Border.all(color: DS.outline, width: 2),
+                  boxShadow: DS.glow(accent, opacity: 0.30, blur: 14, y: 4),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    DIcon(icon, size: 15, color: accent),
+                    DIcon(icon, size: 15, color: DS.outline),
                     const SizedBox(width: DS.s8),
                     Text(
                       label,
-                      style: Type.bodyStrong.copyWith(color: accent, fontSize: 13),
+                      style: Type.bodyStrong.copyWith(color: DS.outline, fontSize: 13),
                     ),
                   ],
                 ),
@@ -796,12 +865,14 @@ class _DelayedProgress extends StatelessWidget {
     required this.from,
     required this.to,
     required this.start,
+    required this.color,
   });
 
   final Animation<double> animation;
   final double from;
   final double to;
   final double start;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -811,7 +882,95 @@ class _DelayedProgress extends StatelessWidget {
           return ProgressTrack(
             value: from + (to - from) * Ease.emphasized.transform(t),
             duration: Duration.zero,
+            height: 7,
+            color: color,
           );
         },
       );
+}
+
+/// Paper thrown once, at the top of the sheet.
+///
+/// Deterministic: every piece's position, tint, spin and drift come from its
+/// index through a cheap hash, so there is no RNG to seed, no state to keep
+/// between frames, and the golden tests render the same picture every run.
+///
+/// It behaves like paper rather than like particles. Each piece is a thin
+/// rectangle spinning about its own horizontal axis, which is drawn by scaling
+/// its height by `cos(spin)` — so a piece edge-on collapses to a line and
+/// flashes, the way real confetti catches the light. Gravity is constant, drift
+/// is a slow sine, and the whole thing fades out well before the animation
+/// ends: the celebration has to be over before the player wants it to be.
+class _ConfettiPainter extends CustomPainter {
+  _ConfettiPainter({required this.t, required this.rank, required this.accent});
+
+  final double t;
+
+  /// Better results get more paper. It is the one reward signal on this screen
+  /// that is felt without being read.
+  final int rank;
+
+  final Color accent;
+
+  /// Cheap integer hash — deterministic, and good enough for scatter.
+  static double _r(int i, int salt) {
+    int h = i * 374761393 + salt * 668265263;
+    h = (h ^ (h >> 13)) * 1274126177;
+    return ((h ^ (h >> 16)) & 0x7FFFFFFF) / 0x7FFFFFFF;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Thrown from the moment the sheet opens and gone by 80%, so it never
+    // competes with the button the player is reaching for.
+    final double fade = 1 - ((t - 0.45) / 0.35).clamp(0.0, 1.0);
+    if (fade <= 0) return;
+
+    final int count = 26 + rank * 14;
+
+    for (int i = 0; i < count; i++) {
+      // Staggered launch, so the burst has a front edge rather than all
+      // appearing on one frame.
+      final double at = ((t - _r(i, 1) * 0.16) / 0.9).clamp(0.0, 1.0);
+      if (at <= 0) continue;
+
+      final double x0 = size.width * (0.08 + _r(i, 2) * 0.84);
+      // Up first, then down: a throw, not a drip.
+      final double vy = 0.55 + _r(i, 3) * 0.75;
+      final double y = size.height * (-0.06 + (-0.42 * at + 1.30 * at * at) * vy);
+      if (y > size.height) continue;
+
+      final double drift = math.sin(at * 5.0 + _r(i, 4) * 6.28) * size.width * 0.05;
+      final double spin = at * (7.0 + _r(i, 5) * 9.0) + _r(i, 6) * 6.28;
+
+      // Mostly the grade's colour so the screen has one identity, with the
+      // ball palette mixed through it so it still reads as confetti and not
+      // as one colour of litter.
+      final Color c = _r(i, 7) < 0.45
+          ? accent
+          : DS.hues[(i * 5 + 3) % DS.hues.length].base;
+
+      final double w = 5.0 + _r(i, 8) * 4.0;
+      final double h = w * (1.5 + _r(i, 9) * 1.1);
+
+      canvas.save();
+      canvas.translate(x0 + drift, y);
+      canvas.rotate(_r(i, 10) * 6.28 + at * 1.4);
+      // The spin. Collapsing the height by cos() turns the rectangle edge-on,
+      // which is the whole reason paper twinkles as it falls.
+      canvas.scale(1.0, math.cos(spin).abs().clamp(0.12, 1.0));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: w, height: h),
+          Radius.circular(w * 0.28),
+        ),
+        Paint()..color = c.withValues(alpha: fade * 0.9),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) =>
+      old.t != t || old.rank != rank || old.accent != accent;
 }
