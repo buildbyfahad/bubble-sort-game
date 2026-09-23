@@ -465,22 +465,30 @@ class _VesselBackPainter extends CustomPainter {
     // Interior. Darker than the page so contents pop, with a slight lift near
     // the mouth where ambient light would actually reach. The skin decides
     // what the glass is made of.
+    // Interior.
+    //
+    // *Clear* glass, not a dark slug. The vessels were opaque panels the
+    // balls sat in front of; the reference for this genre is a real test
+    // tube — you see the ground through it, and the glass only announces
+    // itself at the rim and the edges. A barely-tinted fill plus a strong
+    // rim is what reads as transparent, and it is what makes the balls look
+    // like they are *inside* something.
     final (Color top, Color bottom) = switch (skin) {
       VesselStyle.glass => (
-          Color.lerp(DS.surfaceHigh, DS.inkDeep, 0.42 + dim * 0.25)!.withValues(alpha: 0.94),
-          Color.lerp(DS.inkDeep, DS.surface, 0.16 - dim * 0.1)!.withValues(alpha: 0.97),
+          const Color(0xFFBFD4FF).withValues(alpha: 0.10 - dim * 0.04),
+          const Color(0xFF8FA8E8).withValues(alpha: 0.16 - dim * 0.05),
         ),
       VesselStyle.frost => (
-          Color.lerp(const Color(0xFFB9C8D8), DS.inkDeep, 0.55 + dim * 0.2)!.withValues(alpha: 0.96),
-          Color.lerp(const Color(0xFF8FA3B8), DS.inkDeep, 0.70)!.withValues(alpha: 0.98),
+          const Color(0xFFD8E6F6).withValues(alpha: 0.22 - dim * 0.07),
+          const Color(0xFFA9BDD6).withValues(alpha: 0.30 - dim * 0.08),
         ),
       VesselStyle.brass => (
-          Color.lerp(const Color(0xFF6B4E22), DS.inkDeep, 0.55 + dim * 0.2)!.withValues(alpha: 0.96),
-          Color.lerp(const Color(0xFF3A2A12), DS.inkDeep, 0.35)!.withValues(alpha: 0.98),
+          const Color(0xFFE8B86A).withValues(alpha: 0.14 - dim * 0.05),
+          const Color(0xFF8A6220).withValues(alpha: 0.26 - dim * 0.07),
         ),
       VesselStyle.obsidian => (
-          Color.lerp(const Color(0xFF15171E), DS.inkDeep, 0.3 + dim * 0.2)!.withValues(alpha: 0.98),
-          DS.inkDeep.withValues(alpha: 1.0),
+          const Color(0xFF1A1030).withValues(alpha: 0.62 - dim * 0.1),
+          const Color(0xFF0B0518).withValues(alpha: 0.82),
         ),
     };
     canvas.drawRRect(
@@ -503,8 +511,8 @@ class _VesselBackPainter extends CustomPainter {
           streak.topCenter,
           streak.bottomCenter,
           <Color>[
-            const Color(0xFFFFFFFF).withValues(alpha: 0.11 * (1 - dim * 0.6)),
-            const Color(0xFFFFFFFF).withValues(alpha: 0.022 * (1 - dim * 0.6)),
+            const Color(0xFFFFFFFF).withValues(alpha: 0.30 * (1 - dim * 0.6)),
+            const Color(0xFFFFFFFF).withValues(alpha: 0.06 * (1 - dim * 0.6)),
             const Color(0x00FFFFFF),
           ],
           <double>[0.0, 0.55, 1.0],

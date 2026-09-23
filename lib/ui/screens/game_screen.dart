@@ -409,6 +409,7 @@ class _GameScreenState extends State<GameScreen> {
                   child: Center(
                     child: SoftCard(
                       radius: DS.rXl,
+                      onDark: true,
                       padding: const EdgeInsets.symmetric(horizontal: DS.s8, vertical: DS.s8),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

@@ -24,7 +24,15 @@ class SoftCard extends StatelessWidget {
     this.radius = DS.rLg,
     this.elevated = true,
     this.tint,
+    this.onDark = false,
   });
+
+  /// A panel that sits on the *board* rather than on the sky.
+  ///
+  /// The board went back to being dark, and a light card on it is a hole
+  /// punched in the play field. Surfaces that live over the board keep the
+  /// dark treatment and the light text that goes with it.
+  final bool onDark;
 
   final Widget child;
   final EdgeInsets padding;
@@ -46,7 +54,7 @@ class SoftCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius + 2),
-        color: DS.cardUnder,
+        color: onDark ? DS.outline : DS.cardUnder,
         border: Border.all(color: DS.outline, width: DS.stroke),
         boxShadow: elevated ? DS.e2 : null,
       ),
@@ -58,14 +66,16 @@ class SoftCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: <Color>[
-              DS.card,
-              Color.lerp(DS.cardSoft, tint ?? DS.cardSoft, tint == null ? 0 : 0.16)!,
-            ],
+            colors: onDark
+                ? <Color>[DS.surfaceRaised, DS.surface]
+                : <Color>[
+                    DS.card,
+                    Color.lerp(DS.cardSoft, tint ?? DS.cardSoft, tint == null ? 0 : 0.16)!,
+                  ],
           ),
         ),
         child: DefaultTextStyle.merge(
-          style: Type.body.copyWith(color: DS.inkStrong),
+          style: Type.body.copyWith(color: onDark ? DS.textPrimary : DS.inkStrong),
           child: child,
         ),
       ),

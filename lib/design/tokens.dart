@@ -11,7 +11,18 @@ class DS {
 
   // ---------------------------------------------------------------- surfaces
   //
-  // Rebuilt for a *game*, not an app.
+  // Dark ground, bright glass.
+  //
+  // This went bright violet for a while, on an instruction to take it "full
+  // casual-bright". The reference the brief finally supplied says the
+  // opposite: the games in this specific genre — ball sort, water sort — are
+  // near-black with *clear* glass tubes and very glossy balls on top. The
+  // contrast is the whole product. Twelve saturated hues need somewhere dark
+  // to sit, and a bright ground spends the contrast budget on scenery.
+  //
+  // So the ground is a deep indigo-black again. What survives from the bright
+  // pass is everything that was not the colour: the rounded face, the sunk
+  // buttons, the outlines, the sticker construction.
   //
   // The original palette was near-black with a single gold accent, argued for
   // on the grounds that the whole category is candy-on-white. It produced
@@ -28,14 +39,14 @@ class DS {
   // Darkened from #8E6CFF. A gradient sky means text contrast varies by
   // where on the screen it sits, and screen titles live at the very top —
   // which was the lightest part of it.
-  static const Color skyTop = Color(0xFF7A55F2);
-  static const Color skyMid = Color(0xFF6A47E8);
-  static const Color skyDeep = Color(0xFF4226B4);
+  static const Color skyTop = Color(0xFF2E1B5E);
+  static const Color skyMid = Color(0xFF1F1145);
+  static const Color skyDeep = Color(0xFF120926);
 
   /// The lit surface the vessels stand on. Without it they float in a void,
   /// which is most of why the board did not read as a place.
-  static const Color table = Color(0xFF3B1F9E);
-  static const Color tableEdge = Color(0xFF2A1478);
+  static const Color table = Color(0xFF241542);
+  static const Color tableEdge = Color(0xFF160C2C);
 
   /// `ink` is still the darkest ground — now used for panels and vessels
   /// rather than for the whole screen.

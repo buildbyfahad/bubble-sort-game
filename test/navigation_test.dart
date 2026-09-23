@@ -3,6 +3,7 @@ import 'package:bubble_sort/data/level_catalog.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
 import 'package:bubble_sort/services/wallet_service.dart';
 import 'package:bubble_sort/ui/screens/collection_screen.dart';
+import 'package:bubble_sort/ui/screens/home_screen.dart';
 import 'package:bubble_sort/ui/screens/daily_sheet.dart';
 
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
@@ -43,20 +44,11 @@ void main() {
     await settle(tester, steps: 16);
   }
 
-  testWidgets('the daily is reachable from the road, and pays out',
+  testWidgets('the daily is offered on launch, and pays out',
       (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester, dailyReady: true);
 
-    // Deliberately NOT a launch popup. The road is the home screen, and the
-    // point of making it so was that nothing stands between opening the app
-    // and playing it — a sheet over the map on launch is the lobby again in
-    // a different costume. A badged chip says there is something here without
-    // taking the screen.
-    expect(find.byType(DailyRewardSheet), findsNothing);
-
-    await tester.tap(find.bySemanticsLabel('Today'));
-    await settle(tester, steps: 20);
     expect(find.byType(DailyRewardSheet), findsOneWidget);
     expect(find.text('CLAIM'), findsOneWidget);
 
@@ -75,10 +67,6 @@ void main() {
     useHandset(tester);
     await boot(tester);
 
-    // The challenge lives in the Today sheet now, beside the reward they
-    // share a reset with.
-    await tester.tap(find.bySemanticsLabel('Today'));
-    await settle(tester, steps: 20);
     await tester.tap(find.text("Today's challenge"));
     await settle(tester, steps: 20);
     expect(find.byType(GameScreen), findsOneWidget);
@@ -93,8 +81,9 @@ void main() {
   testWidgets('the app boots into the menu', (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester);
-    // The road IS the home screen now — no lobby in front of it.
-    expect(find.byType(LevelsScreen), findsOneWidget);
+    // Play-testing preferred a menu in front of the map: landing straight on
+    // the road read as being dropped into the middle of something.
+    expect(find.byType(HomeScreen), findsOneWidget);
     await drainTimers(tester);
   });
 
@@ -102,9 +91,7 @@ void main() {
     useHandset(tester);
     await boot(tester);
 
-    // One tap from launch to play: the road is the home screen, and the lit
-    // node is the only thing on it asking to be pressed.
-    await tester.tap(find.text('1'));
+    await tester.tap(find.text('PLAY'));
     await settle(tester, steps: 20);
 
     expect(tester.takeException(), isNull);
@@ -118,10 +105,13 @@ void main() {
     useHandset(tester);
     await boot(tester);
 
-    // No lobby to go through — every other screen is a chip on the road.
+    await tester.tap(find.text('VIEW THE ROAD'));
+    await settle(tester, steps: 20);
     expect(find.byType(LevelsScreen), findsOneWidget);
 
-    await tester.tap(find.bySemanticsLabel('Settings'));
+    // Both the menu underneath and the road carry a Settings control, so the
+    // finder has to say which — `.last` is the one on top.
+    await tester.tap(find.bySemanticsLabel('Settings').last);
     await settle(tester, steps: 20);
     expect(tester.takeException(), isNull);
     expect(find.byType(SettingsSheet), findsOneWidget);
@@ -130,7 +120,7 @@ void main() {
     nav.pop();
     await settle(tester, steps: 16);
 
-    await tester.tap(find.bySemanticsLabel('Collection'));
+    await tester.tap(find.bySemanticsLabel('Collection').last);
     await settle(tester, steps: 20);
     expect(tester.takeException(), isNull);
     expect(find.byType(CollectionScreen), findsOneWidget);
@@ -141,7 +131,7 @@ void main() {
       (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester);
-    await tester.tap(find.text('1'));
+    await tester.tap(find.text('PLAY'));
     await settle(tester, steps: 20);
 
     // Level 1 is [amber-topped, vermilion-topped, empty, empty]; pouring the
@@ -163,6 +153,32 @@ void main() {
     await tester.tap(find.text('UNDO'));
     await settle(tester, steps: 16);
     expect(tester.takeException(), isNull);
+    await drainTimers(tester);
+  });
+
+  testWidgets('backing out of a level returns to the road, not a black screen',
+      (WidgetTester tester) async {
+    useHandset(tester);
+    await boot(tester);
+    await tester.tap(find.text('VIEW THE ROAD'));
+    await settle(tester, steps: 20);
+
+    await tester.tap(find.text('1'));
+    await settle(tester, steps: 20);
+    expect(find.byType(GameScreen), findsOneWidget);
+
+    // The road must still be underneath. Opening a level used to REPLACE it,
+    // which was right while the road sat on top of a menu and became a black
+    // screen the moment the road was the root — popping the only route
+    // leaves the navigator with nothing to show.
+    final NavigatorState nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    expect(nav.canPop(), isTrue, reason: 'there must be something to go back to');
+
+    nav.pop();
+    await settle(tester, steps: 20);
+    expect(tester.takeException(), isNull);
+    expect(find.byType(LevelsScreen), findsOneWidget);
+    expect(find.byType(GameScreen), findsNothing);
     await drainTimers(tester);
   });
 }

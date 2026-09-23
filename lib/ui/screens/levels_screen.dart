@@ -197,10 +197,12 @@ class _MapPlan {
 // --------------------------------------------------------------- the screen
 
 class LevelsScreen extends StatefulWidget {
-  const LevelsScreen({super.key, this.isHome = true});
+  const LevelsScreen({super.key, this.isHome = false});
 
-  /// The road is the app's root. When it is pushed on top of something else
-  /// it grows a back button instead of the home chrome.
+  /// True only when the road is the app's root. Play-testing preferred a menu
+  /// in front of it — landing straight on the map read as being dropped into
+  /// the middle of something — so the default is now "pushed", with a back
+  /// button.
   final bool isHome;
 
   @override
@@ -242,7 +244,13 @@ class _LevelsScreenState extends State<LevelsScreen> with SingleTickerProviderSt
       return;
     }
     Fx.navigate(context);
-    Navigator.of(context).pushReplacement(riseRoute<void>(GameScreen(levelId: id)));
+    // push, NOT pushReplacement.
+    //
+    // Replacing was right while the road was pushed on top of a menu: swap
+    // road for level, and back returned to the menu. The moment the road
+    // became the root it meant replacing the *only* route, so backing out of
+    // a level popped an empty navigator and left a black screen.
+    Navigator.of(context).push(riseRoute<void>(GameScreen(levelId: id)));
   }
 
   @override
