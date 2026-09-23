@@ -4,6 +4,7 @@ import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../services/wallet_service.dart';
 import '../app_scope.dart';
+import '../feedback.dart';
 import '../widgets/buttons.dart';
 import '../widgets/icons.dart';
 import '../widgets/surfaces.dart';
@@ -37,22 +38,19 @@ class _ShopSheetState extends State<ShopSheet> {
     if (!mounted) return;
 
     if (!paid) {
-      scope.audio.reject();
-      scope.haptics.reject();
+      Fx.refuse(context);
       setState(() => _rejected = item.id);
       return;
     }
     await scope.wallet.grantHints(item.hints);
     if (!mounted) return;
-    scope.audio.star();
-    scope.haptics.seal();
+    Fx.reward(context);
     setState(() => _rejected = null);
   }
 
   Future<void> _watch(AppScope scope, {required int coins, required int hints}) async {
     if (_watching) return;
     setState(() => _watching = true);
-    scope.audio.tap();
 
     final bool earned = await scope.ads.showRewarded();
     if (!mounted) return;
@@ -61,8 +59,7 @@ class _ShopSheetState extends State<ShopSheet> {
       await scope.wallet.grantCoins(coins);
       await scope.wallet.grantHints(hints);
       if (!mounted) return;
-      scope.audio.unlock();
-      scope.haptics.celebrate();
+      Fx.unlock(context);
     }
     setState(() => _watching = false);
   }
@@ -101,7 +98,6 @@ class _ShopSheetState extends State<ShopSheet> {
                           size: 38,
                           semanticLabel: 'Close',
                           onTap: () {
-                            scope.audio.tap();
                             Navigator.of(context).pop();
                           },
                         ),
@@ -158,7 +154,7 @@ class _ShopSheetState extends State<ShopSheet> {
                         'Coins come from clearing boards. '
                         'A flawless clear pays the most.',
                         textAlign: TextAlign.center,
-                        style: Type.caption,
+                        style: Type.captionInk,
                       ),
                     ),
                   ],
@@ -227,14 +223,17 @@ class _ShopRowState extends State<_ShopRow> with TickerProviderStateMixin, Press
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = widget.affordable ? DS.gold : DS.textTertiary;
+    final Color accent = widget.affordable ? DS.goldDeep : DS.inkSoft;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => pressDown(),
       onTapCancel: pressUp,
       onTapUp: (_) => pressUp(),
-      onTap: widget.onTap,
+      onTap: () {
+        Fx.tap(context);
+        widget.onTap();
+      },
       child: AnimatedBuilder(
         animation: Listenable.merge(<Listenable>[press, _shake]),
         builder: (BuildContext context, _) {
@@ -266,7 +265,7 @@ class _ShopRowState extends State<_ShopRow> with TickerProviderStateMixin, Press
                         children: <Widget>[
                           Text(widget.item.label, style: Type.bodyStrong),
                           const SizedBox(height: 2),
-                          Text(widget.item.detail, style: Type.caption),
+                          Text(widget.item.detail, style: Type.captionInk),
                         ],
                       ),
                     ),
@@ -325,7 +324,12 @@ class _WatchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: enabled ? onTap : null,
+        onTap: enabled
+            ? () {
+                Fx.tap(context);
+                onTap();
+              }
+            : () => Fx.refuse(context),
         child: Opacity(
           opacity: enabled ? 1 : 0.5,
           child: Container(
@@ -345,7 +349,7 @@ class _WatchRow extends StatelessWidget {
                     children: <Widget>[
                       Text(label, style: Type.bodyStrong),
                       const SizedBox(height: 2),
-                      Text(detail, style: Type.caption.copyWith(color: accent)),
+                      Text(detail, style: Type.captionInk.copyWith(color: accent)),
                     ],
                   ),
                 ),
@@ -360,7 +364,7 @@ class _WatchRow extends StatelessWidget {
 class _Rule extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
-      Container(height: 1, color: const Color(0xFFFFFFFF).withValues(alpha: 0.06));
+      Container(height: 1, color: DS.cardEdge);
 }
 
 class _OrLabel extends StatelessWidget {
@@ -368,5 +372,5 @@ class _OrLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Text('OR EARN', style: Type.label.copyWith(letterSpacing: 1.4));
+      Text('OR EARN', style: Type.labelInk.copyWith(letterSpacing: 1.4));
 }

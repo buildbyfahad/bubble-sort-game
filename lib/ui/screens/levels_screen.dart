@@ -9,6 +9,7 @@ import '../../data/level_catalog.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../app_scope.dart';
+import '../feedback.dart';
 import '../transitions.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/buttons.dart';
@@ -46,13 +47,13 @@ import 'level_complete.dart' show ClearGrade, gradeFor;
 /// next chapter starts; not enough to browse.
 const int _lookahead = 8;
 
-const double _nodeRow = 104;
-const double _bannerRow = 104;
+const double _nodeRow = 116;
+const double _bannerRow = 128;
 const double _footerRow = 190;
 const double _topPad = 8;
 
 /// Node diameter, and how far the path swings off centre.
-const double _nodeSize = 66;
+const double _nodeSize = 78;
 const double _swing = 0.28;
 
 /// Radians of the serpentine per level. A shade under a fifth of a turn, so
@@ -217,12 +218,10 @@ class _LevelsScreenState extends State<LevelsScreen> with SingleTickerProviderSt
 
   void _open(BuildContext context, AppScope scope, int id) {
     if (!scope.progress.isUnlocked(id)) {
-      scope.haptics.reject();
-      scope.audio.reject();
+      Fx.refuse(context);
       return;
     }
-    scope.audio.whoosh();
-    scope.haptics.select();
+    Fx.navigate(context);
     Navigator.of(context).pushReplacement(riseRoute<void>(GameScreen(levelId: id)));
   }
 
@@ -250,7 +249,6 @@ class _LevelsScreenState extends State<LevelsScreen> with SingleTickerProviderSt
                   total: scope.catalog.length,
                   chapter: scope.catalog.chapterOf(frontier),
                   onBack: () {
-                    scope.audio.tap();
                     Navigator.of(context).pop();
                   },
                 ),
@@ -365,7 +363,8 @@ class _MapHeader extends StatelessWidget {
                 children: <Widget>[
                   Text('THE ROAD', style: Type.labelBright),
                   const SizedBox(height: DS.s4),
-                  Text('$cleared of $total cleared', style: Type.caption),
+                  Text('$cleared of $total cleared',
+                      style: Type.caption.copyWith(color: DS.textSecondary)),
                 ],
               ),
             ),
@@ -397,79 +396,69 @@ class _ChapterBanner extends StatelessWidget {
     final Color accent = complete ? DS.aqua : (reached ? DS.gold : DS.textTertiary);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(DS.s24, DS.s20, DS.s24, DS.s12),
+      padding: const EdgeInsets.fromLTRB(DS.s20, DS.s16, DS.s20, DS.s12),
       child: Opacity(
-        opacity: reached ? 1 : 0.5,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(child: _Rule(accent: accent, fadeToward: -1)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: DS.s12),
-                  child: Text(
-                    'CHAPTER ${chapter.number.toString().padLeft(2, '0')}',
-                    style: Type.label.copyWith(color: accent, letterSpacing: 1.4),
+        opacity: reached ? 1 : 0.55,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: DS.s20, vertical: DS.s12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(DS.rLg),
+            // A solid plate rather than a rule with a word on it. The road
+            // runs behind it, so the chapter reads as a gate the player
+            // passes through — which is what a chapter is.
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                Color.lerp(DS.card, accent, 0.10)!,
+                Color.lerp(DS.cardSoft, accent, 0.18)!,
+              ],
+            ),
+            border: Border.all(color: accent.withValues(alpha: 0.55), width: 2),
+            boxShadow: DS.e2,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'CHAPTER ${chapter.number.toString().padLeft(2, '0')}',
+                style: Type.label.copyWith(
+                  color: Color.lerp(accent, DS.inkStrong, 0.35),
+                  letterSpacing: 1.6,
+                ),
+              ),
+              const SizedBox(height: DS.s4),
+              Text(
+                chapter.name,
+                style: Type.titleMd.copyWith(fontSize: 22, color: DS.inkStrong),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.s8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  if (complete) ...<Widget>[
+                    const DIcon(DIcons.check, size: 12, color: DS.aquaDeep),
+                    const SizedBox(width: DS.s4),
+                  ] else if (!reached) ...<Widget>[
+                    const DIcon(DIcons.lock, size: 12, color: DS.inkSoft),
+                    const SizedBox(width: DS.s4),
+                  ],
+                  Text(
+                    '$cleared / ${chapter.length}',
+                    style: Type.label.copyWith(
+                      color: complete ? DS.aquaDeep : DS.inkSoft,
+                      letterSpacing: 0.8,
+                    ),
                   ),
-                ),
-                Expanded(child: _Rule(accent: accent, fadeToward: 1)),
-              ],
-            ),
-            const SizedBox(height: DS.s8),
-            Text(
-              chapter.name,
-              style: Type.titleMd.copyWith(fontSize: 21),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.s8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                if (complete) ...<Widget>[
-                  const DIcon(DIcons.check, size: 11, color: DS.aqua),
-                  const SizedBox(width: DS.s4),
-                ] else if (!reached) ...<Widget>[
-                  const DIcon(DIcons.lock, size: 11, color: DS.textTertiary),
-                  const SizedBox(width: DS.s4),
                 ],
-                Text(
-                  '$cleared / ${chapter.length}',
-                  style: Type.label.copyWith(color: accent, letterSpacing: 0.8),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-/// A hairline that fades out toward one end, so the banner reads as a gate the
-/// road passes through rather than as a divider dropped on top of it.
-class _Rule extends StatelessWidget {
-  const _Rule({required this.accent, required this.fadeToward});
-
-  final Color accent;
-
-  /// -1 fades toward the left edge, 1 toward the right.
-  final int fadeToward;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 1,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: fadeToward < 0 ? Alignment.centerLeft : Alignment.centerRight,
-            end: fadeToward < 0 ? Alignment.centerRight : Alignment.centerLeft,
-            colors: <Color>[
-              accent.withValues(alpha: 0.0),
-              accent.withValues(alpha: 0.30),
-            ],
-          ),
-        ),
-      );
 }
 
 // -------------------------------------------------------------------- road
@@ -642,8 +631,8 @@ class _TrackPainter extends CustomPainter {
   final _NodeRow row;
   final bool walked;
 
-  static const double _grooveWidth = 17;
-  static const double _lineWidth = 6;
+  static const double _grooveWidth = 22;
+  static const double _lineWidth = 8;
 
   @override
   void paint(Canvas canvas, Size size) {

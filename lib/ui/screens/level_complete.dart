@@ -261,7 +261,7 @@ class _Crest extends StatelessWidget {
                 const SizedBox(height: DS.s8),
                 Text(
                   grade.note,
-                  style: Type.label.copyWith(
+                  style: Type.labelInk.copyWith(
                     color: grade.color.withValues(alpha: 0.55),
                     letterSpacing: 2.0,
                   ),
@@ -513,7 +513,7 @@ class _ResultCard extends StatelessWidget {
           Center(
             child: Text(
               daily ? 'CHALLENGE CLEARED' : 'LEVEL ${level.id} CLEARED',
-              style: Type.label.copyWith(color: DS.textTertiary),
+              style: Type.labelInk.copyWith(color: DS.inkSoft),
             ),
           ),
           const SizedBox(height: DS.s16),
@@ -595,11 +595,11 @@ class _ResultCard extends StatelessWidget {
             const SizedBox(height: DS.s20),
             Row(
               children: <Widget>[
-                Text('PROGRESS', style: Type.label),
+                Text('PROGRESS', style: Type.labelInk),
                 const Spacer(),
                 Text(
                   '${(overallAfter * 100).toStringAsFixed(1)}%',
-                  style: Type.label.copyWith(color: DS.textSecondary),
+                  style: Type.labelInk.copyWith(color: DS.inkBody),
                 ),
               ],
             ),
@@ -668,13 +668,15 @@ class _Stat extends StatelessWidget {
                   fontSize: 26,
                   color: highlight
                       ? DS.gold
-                      : (muted ? DS.textTertiary : DS.textPrimary),
+                      // Ink, not textPrimary: this sits on a light card, and
+                      // white-on-white made the headline number invisible.
+                      : (muted ? DS.inkSoft : DS.inkStrong),
                 ),
               ),
               const SizedBox(height: DS.s4),
               Text(
                 label,
-                style: Type.label.copyWith(color: highlight ? DS.gold : DS.textTertiary),
+                style: Type.labelInk.copyWith(color: highlight ? DS.goldDeep : DS.inkSoft),
               ),
             ],
           ),
@@ -689,7 +691,7 @@ class _StatDivider extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 1,
         height: 34,
-        color: const Color(0xFFFFFFFF).withValues(alpha: 0.06),
+        color: DS.cardEdge,
       );
 }
 

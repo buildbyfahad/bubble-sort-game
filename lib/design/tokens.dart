@@ -25,7 +25,10 @@ class DS {
   // one of them reads more cleanly against a dark vessel than a light one.
   // The brightness goes into the world behind the board, where it costs the
   // puzzle nothing.
-  static const Color skyTop = Color(0xFF8E6CFF);
+  // Darkened from #8E6CFF. A gradient sky means text contrast varies by
+  // where on the screen it sits, and screen titles live at the very top —
+  // which was the lightest part of it.
+  static const Color skyTop = Color(0xFF7A55F2);
   static const Color skyMid = Color(0xFF6A47E8);
   static const Color skyDeep = Color(0xFF4226B4);
 
@@ -69,6 +72,20 @@ class DS {
   // "quiet"; on a bright violet one it reads as "broken".
   static const Color textTertiary = Color(0xFFB9ABF2);
   static const Color textOnGold = Color(0xFF4A3000);
+
+  // ---------------------------------------------------------------- on light
+  //
+  // Cards are light now, and the sky spans the middle of the value range —
+  // a panel can only read as a panel by being clearly darker or clearly
+  // lighter than it, with nothing usable in between. Dark panels were the
+  // first choice; these are the inks for the other one.
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color cardSoft = Color(0xFFF3EFFF);
+  static const Color cardEdge = Color(0xFFE2D9FF);
+
+  static const Color inkStrong = Color(0xFF241557);
+  static const Color inkBody = Color(0xFF4B3A8C);
+  static const Color inkSoft = Color(0xFF8577C4);
 
   // ------------------------------------------------------------ bubble palette
   //

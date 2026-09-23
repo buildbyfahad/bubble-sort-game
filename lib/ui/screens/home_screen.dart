@@ -5,6 +5,7 @@ import '../../data/level.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../app_scope.dart';
+import '../feedback.dart';
 import '../transitions.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/buttons.dart';
@@ -59,12 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openDaily(AppScope scope) {
-    scope.audio.whoosh();
+    Fx.navigate(context);
     Navigator.of(context).push(sheetRoute<void>(const DailyRewardSheet()));
   }
 
   void _openShop(AppScope scope) {
-    scope.audio.tap();
+    Fx.navigate(context);
     Navigator.of(context).push(sheetRoute<void>(const ShopSheet()));
   }
 
@@ -129,7 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             icon: DIcons.settings,
                             semanticLabel: 'Settings',
                             onTap: () {
-                              scope.audio.tap();
                               Navigator.of(context).push(sheetRoute<void>(const SettingsSheet()));
                             },
                           ),
@@ -341,7 +341,10 @@ class _BalancePillState extends State<_BalancePill>
         onTapDown: (_) => pressDown(),
         onTapCancel: pressUp,
         onTapUp: (_) => pressUp(),
-        onTap: widget.onTap,
+        onTap: () {
+          Fx.tap(context);
+          widget.onTap();
+        },
         child: AnimatedBuilder(
           animation: press,
           builder: (BuildContext context, _) => Transform.scale(
@@ -466,7 +469,10 @@ class _TodayRowState extends State<_TodayRow> with TickerProviderStateMixin, Pre
       onTapDown: (_) => pressDown(),
       onTapCancel: pressUp,
       onTapUp: (_) => pressUp(),
-      onTap: widget.onTap,
+      onTap: () {
+        Fx.tap(context);
+        widget.onTap();
+      },
       child: AnimatedBuilder(
         animation: press,
         builder: (BuildContext context, _) => Opacity(

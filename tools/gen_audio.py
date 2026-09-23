@@ -294,13 +294,67 @@ print('interface')
 
 # ---------------------------------------------------------------- UI: tap
 #
-# Barely there. A menu tap that announces itself is the fastest way to make a
-# player reach for the mute switch inside thirty seconds.
-tap = mix(
-    fm_bell(PENTA[5], 0.09, ratio=3.1, index=1.6, index_decay=40, amp_decay=16, attack=0.0008),
-    gain(env_apply(bandpass(noise(0.02, seed=3), 1800, 7000), env_ad(int(0.02 * SR), 0.0004, 20)), 0.30),
-)
-write('tap.wav', reverb(tap, wet=0.10, tail=0.20), peak=0.34)
+# Rebuilt to be *heard*.
+#
+# The old interface cues were designed on the principle that a menu tap which
+# announces itself is the fastest way to make a player reach for the mute
+# switch. That is true of an app. In a game it produces the opposite problem —
+# play-testing said the sound "is not gaming, not engaging" — because a game's
+# interface noises are part of the toy. They should feel like pressing a good
+# physical button, and a 0.3-peak blip through a phone speaker in a room with
+# any noise in it simply is not there.
+#
+# So every one of these is now a POP: a pitched body with a real transient on
+# the front, tuned an octave apart so the vocabulary is legible by ear alone.
+def pop(freq, dur=0.085, click=0.4, decay=16.0, bend=0.55):
+    """A pitched pop with a click on the front and a downward pitch bend.
+
+    The bend is what separates a pop from a beep — a struck object's pitch
+    falls as the impact energy leaves it, and the ear reads a steady pitch as
+    electronic."""
+    n = int(dur * SR)
+    out = [0.0] * n
+    ph = 0.0
+    for i in range(n):
+        t = i / SR
+        f = freq * (1 + bend * math.exp(-t * 90))
+        ph += two_pi_const * f / SR
+        env = math.exp(-t * decay) * min(1.0, i / 30)
+        out[i] = (math.sin(ph) + 0.30 * math.sin(2 * ph) + 0.10 * math.sin(3 * ph)) * env
+    tick = env_apply(
+        bandpass(noise(0.012, seed=int(freq) % 600), 2400, 9000),
+        env_ad(int(0.012 * SR), 0.0002, 40),
+    )
+    return mix(out, gain(tick, click))
+
+
+two_pi_const = 2 * math.pi
+
+# Secondary controls — icon buttons, rows, dock. Bright and small.
+write('tap.wav', reverb(pop(PENTA[4] * 2, 0.075, click=0.45), wet=0.12, tail=0.20),
+      peak=0.62, drive=1.6)
+
+# The main action on a screen. Lower, fatter, with a second body under it, so
+# a PLAY button is audibly a different weight of thing from a close button.
+write('press.wav',
+      reverb(mix(pop(PENTA[2], 0.13, click=0.55, decay=11.0),
+                 gain(pop(PENTA[0] / 2, 0.17, click=0.0, decay=9.0), 0.55),
+                 delay(gain(pop(PENTA[5], 0.08, click=0.0, decay=22.0), 0.30), 0.028)),
+             wet=0.16, tail=0.28),
+      peak=0.70, drive=1.7)
+
+# Switches — a rising pair and a falling one, so on and off are distinct with
+# the phone in a pocket.
+write('toggle_on.wav',
+      reverb(mix(pop(PENTA[2], 0.06, click=0.35, decay=24.0),
+                 delay(pop(PENTA[5], 0.07, click=0.0, decay=20.0), 0.045)),
+             wet=0.12, tail=0.2),
+      peak=0.58, drive=1.5)
+write('toggle_off.wav',
+      reverb(mix(pop(PENTA[4], 0.06, click=0.35, decay=24.0),
+                 delay(pop(PENTA[1], 0.08, click=0.0, decay=18.0), 0.045)),
+             wet=0.12, tail=0.2),
+      peak=0.55, drive=1.5)
 
 # ---------------------------------------------------------------- UI: whoosh
 #
@@ -308,11 +362,10 @@ write('tap.wav', reverb(tap, wet=0.10, tail=0.20), peak=0.34)
 # something passing, which is exactly what a push transition is.
 wh = env_apply(sweep_lowpass(noise(0.34, seed=91), 400, 5200),
                env_ad(int(0.34 * SR), 0.10, 3.0))
-write('whoosh.wav', reverb(gain(wh, 0.8), wet=0.22, tail=0.4), peak=0.30)
+write('whoosh.wav', reverb(gain(wh, 0.8), wet=0.22, tail=0.4), peak=0.52)
 
 # ---------------------------------------------------------------- UI: tick
-write('tick.wav', fm_bell(PENTA[7], 0.06, ratio=4.2, index=1.2, index_decay=50,
-                          amp_decay=20, attack=0.0005), peak=0.30)
+write('tick.wav', pop(PENTA[7] * 2, 0.045, click=0.3, decay=34.0), peak=0.46)
 
 # ------------------------------------------------------------------ UI: star
 #
@@ -322,7 +375,7 @@ star = mix(
     fm_bell(PENTA[7], 0.30, ratio=2.0, index=2.2, index_decay=16, amp_decay=7, attack=0.001),
     delay(gain(pluck(PENTA[9], 0.24, seed=5), 0.35), 0.02),
 )
-write('star.wav', reverb(star, wet=0.30, tail=0.5), peak=0.44)
+write('star.wav', reverb(star, wet=0.30, tail=0.5), peak=0.62)
 
 # ---------------------------------------------------------------- UI: unlock
 #
@@ -335,7 +388,7 @@ unl = mix(
     delay(gain(fm_bell(PENTA[7], 0.40, ratio=3.0, index=1.6, index_decay=18,
                        amp_decay=6.0, attack=0.002), 0.7), 0.30),
 )
-write('unlock.wav', reverb(unl, wet=0.30, tail=0.8), peak=0.52)
+write('unlock.wav', reverb(unl, wet=0.30, tail=0.8), peak=0.68)
 
 print('board')
 
@@ -356,7 +409,7 @@ lift = mix(
     gain(env_apply(sweep_lowpass(noise(0.16, seed=17), 700, 4200),
                    env_ad(n_lift, 0.03, 5.0)), 0.28),
 )
-write('lift.wav', reverb(lift, wet=0.18, tail=0.3), peak=0.40)
+write('lift.wav', reverb(lift, wet=0.18, tail=0.3), peak=0.58)
 
 # ------------------------------------------------------------------- drops
 #
@@ -380,7 +433,7 @@ for i in range(4):
     click = gain(env_apply(bandpass(noise(0.03, seed=23 + i), 900, 5200),
                            env_ad(int(0.03 * SR), 0.0004, 26)), 0.34)
     write('drop_{}.wav'.format(i + 1),
-          reverb(mix(body, gain(pip, 0.45), click), wet=0.16, tail=0.28), peak=0.50)
+          reverb(mix(body, gain(pip, 0.45), click), wet=0.16, tail=0.28), peak=0.66)
 
 # ----------------------------------------------------------------- invalid
 #
@@ -390,7 +443,7 @@ inv = mix(
     fm_bell(D / 2, 0.16, ratio=1.19, index=1.1, index_decay=30, amp_decay=13, attack=0.004),
     gain(env_apply(lowpass(noise(0.06, seed=61), 620), env_ad(int(0.06 * SR), 0.003, 16)), 0.4),
 )
-write('invalid.wav', reverb(inv, wet=0.10, tail=0.2), peak=0.30)
+write('invalid.wav', reverb(inv, wet=0.10, tail=0.2), peak=0.50)
 
 print('completion')
 

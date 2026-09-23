@@ -123,7 +123,8 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
       title: 'Bubble Sort',
       color: DS.ink,
       debugShowCheckedModeBanner: false,
-      textStyle: Type.body,
+      // The base every uncoloured style inherits from. Cards override it.
+      textStyle: Type.body.copyWith(color: DS.textPrimary),
       // Routes are pushed imperatively with the game's own transitions; this
       // is only the root page.
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>

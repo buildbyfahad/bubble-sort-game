@@ -15,9 +15,16 @@ class HapticService {
 
   bool get _on => _settings.haptics;
 
-  /// Lightest tick — selecting a vessel, lifting a stack.
+  /// Lightest tick — any secondary control, selecting a vessel.
   void select() {
     if (_on) HapticFeedback.selectionClick();
+  }
+
+  /// The main action on a screen. Heavier than [select] so the primary
+  /// control feels like a different object under the thumb, which is the
+  /// whole reason it is drawn as one.
+  void press() {
+    if (_on) HapticFeedback.mediumImpact();
   }
 
   /// A ball settling into place.

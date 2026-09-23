@@ -28,7 +28,12 @@ class Type {
         letterSpacing: spacing,
         fontWeight: FontWeight.values[(weight ~/ 100 - 1).clamp(0, 8)],
         fontVariations: _w(weight),
-        color: color ?? DS.textPrimary,
+        // Null when unspecified, so the style INHERITS from the nearest
+        // DefaultTextStyle. Baking a default here meant no style in the game
+        // could ever adapt to the surface it sat on — which is fine while
+        // every surface is the same colour, and is why the cards came out
+        // with invisible titles the moment they went light.
+        color: color,
       );
 
   static TextStyle _inter(double size, double weight, {double? spacing, double? height, Color? color}) =>
@@ -39,7 +44,7 @@ class Type {
         letterSpacing: spacing,
         fontWeight: FontWeight.values[(weight ~/ 100 - 1).clamp(0, 8)],
         fontVariations: _w(weight),
-        color: color ?? DS.textPrimary,
+        color: color,
       );
 
   /// The wordmark. Light weight at a large size with generous tracking is what
@@ -58,13 +63,26 @@ class Type {
   /// Small-caps-style label: uppercase with wide tracking. Used sparingly for
   /// section and status labels.
   static TextStyle get label => _inter(11.5, 700, spacing: 1.2, height: 1.0, color: DS.textTertiary);
-  static TextStyle get labelBright => _inter(11.5, 700, spacing: 1.2, height: 1.0, color: DS.textSecondary);
+  // White, not textSecondary: this is the screen-title style and it sits on
+  // the lightest part of the sky.
+  static TextStyle get labelBright => _inter(11.5, 700, spacing: 1.2, height: 1.0, color: DS.textPrimary);
 
   static TextStyle get body => _inter(14.5, 400, height: 1.45, color: DS.textSecondary);
   static TextStyle get bodyStrong => _inter(15, 700, height: 1.35);
   static TextStyle get caption => _inter(12.5, 400, height: 1.35, color: DS.textTertiary);
 
   /// Primary button text.
+  // ---------------------------------------------------------------- on light
+  //
+  // The four styles below bake a light colour, so they are unreadable on a
+  // card. [SoftCard] provides a dark DefaultTextStyle, which the *uncoloured*
+  // styles (titles, numerals, bodyStrong) pick up on their own — these are
+  // the explicit counterparts for the four that cannot.
+  static TextStyle get labelInk => label.copyWith(color: DS.inkSoft);
+  static TextStyle get labelInkStrong => label.copyWith(color: DS.inkBody);
+  static TextStyle get captionInk => caption.copyWith(color: DS.inkSoft);
+  static TextStyle get bodyInk => body.copyWith(color: DS.inkBody);
+
   static TextStyle get button => _inter(17.5, 800, spacing: 0.4, color: DS.textOnGold);
-  static TextStyle get buttonGhost => _inter(14, 500, spacing: 0.3, color: DS.textSecondary);
+  static TextStyle get buttonGhost => _inter(14.5, 700, spacing: 0.3);
 }

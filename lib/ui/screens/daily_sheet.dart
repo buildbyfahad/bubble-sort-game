@@ -6,6 +6,7 @@ import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../services/wallet_service.dart';
 import '../app_scope.dart';
+import '../feedback.dart';
 import '../widgets/buttons.dart';
 import '../widgets/icons.dart';
 import '../widgets/surfaces.dart';
@@ -66,8 +67,7 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
       setState(() => _busy = false);
       return;
     }
-    scope.audio.unlock();
-    scope.haptics.celebrate();
+    Fx.unlock(context);
     setState(() {
       _claimed = reward;
       _busy = false;
@@ -108,14 +108,14 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text('DAILY REWARD', style: Type.label),
+                              Text('DAILY REWARD', style: Type.labelInk),
                               const SizedBox(height: DS.s8),
                               Row(
                                 children: <Widget>[
                                   DIcon(
                                     DIcons.flame,
                                     size: 17,
-                                    color: shownStreak > 0 ? DS.gold : DS.textTertiary,
+                                    color: shownStreak > 0 ? DS.goldDeep : DS.inkSoft,
                                   ),
                                   const SizedBox(width: DS.s8),
                                   Text(
@@ -134,7 +134,6 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
                           size: 38,
                           semanticLabel: 'Close',
                           onTap: () {
-                            scope.audio.tap();
                             Navigator.of(context).pop();
                           },
                         ),
@@ -180,7 +179,7 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
                           'Claimed. Come back tomorrow for '
                           '${WalletService.rewardFor(WalletService.cycleDayFor(w.streak + 1)).coins}.',
                           textAlign: TextAlign.center,
-                          style: Type.caption,
+                          style: Type.captionInk,
                         ),
                       ),
                   ],
@@ -252,7 +251,7 @@ class _RungState extends State<_Rung> with SingleTickerProviderStateMixin {
     final bool finale = widget.day == 7;
     final Color accent = widget.taken
         ? DS.aqua
-        : (widget.current ? DS.gold : DS.textTertiary);
+        : (widget.current ? DS.goldDeep : DS.inkSoft);
 
     return AnimatedBuilder(
       animation: _breathe,
@@ -278,7 +277,7 @@ class _RungState extends State<_Rung> with SingleTickerProviderStateMixin {
             children: <Widget>[
               Text(
                 '${widget.day}',
-                style: Type.label.copyWith(
+                style: Type.labelInk.copyWith(
                   color: accent,
                   fontSize: 9,
                   letterSpacing: 0.4,
@@ -296,7 +295,7 @@ class _RungState extends State<_Rung> with SingleTickerProviderStateMixin {
               const SizedBox(height: DS.s4),
               Text(
                 '${widget.reward.coins}',
-                style: Type.label.copyWith(
+                style: Type.labelInk.copyWith(
                   color: accent,
                   fontSize: finale ? 10 : 9,
                   letterSpacing: 0,

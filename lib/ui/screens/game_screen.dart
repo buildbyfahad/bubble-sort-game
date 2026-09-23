@@ -195,7 +195,6 @@ class _GameScreenState extends State<GameScreen> {
               ..pushReplacement(riseRoute<void>(GameScreen(levelId: level.id + 1)));
           },
           onReplay: () {
-            _scope.audio.tap();
             Navigator.of(context).pop();
             setState(() {
               _controller
@@ -241,7 +240,6 @@ class _GameScreenState extends State<GameScreen> {
           daily: true,
           onNext: () {},
           onReplay: () {
-            _scope.audio.tap();
             Navigator.of(context).pop();
             setState(() {
               _controller
@@ -288,8 +286,9 @@ class _GameScreenState extends State<GameScreen> {
     // sells, so it opens the shop rather than buzzing at them. A dead button
     // at the exact point of need is the most annoying way to run an economy.
     if (_scope.wallet.hints <= 0) {
-      _scope.haptics.reject();
-      _scope.audio.tap();
+      // The dock button has already played its own tap; this is the *result*
+      // of the tap, so it gets the navigation cue rather than a second click.
+      _scope.audio.whoosh();
       await Navigator.of(context).push(sheetRoute<void>(const ShopSheet()));
       return;
     }
@@ -334,11 +333,9 @@ class _GameScreenState extends State<GameScreen> {
                   flow: _controller.flow,
                   daily: widget.daily,
                   onBack: () {
-                    _scope.audio.tap();
                     Navigator.of(context).pop();
                   },
                   onSettings: () {
-                    _scope.audio.tap();
                     Navigator.of(context).push(sheetRoute<void>(const SettingsSheet()));
                   },
                 ),
@@ -732,6 +729,6 @@ class _DockDivider extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 1,
         height: 30,
-        color: const Color(0xFFFFFFFF).withValues(alpha: 0.055),
+        color: DS.hairlineStrong,
       );
 }

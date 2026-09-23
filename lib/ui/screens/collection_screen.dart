@@ -4,6 +4,7 @@ import '../../data/cosmetics.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../app_scope.dart';
+import '../feedback.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/bubble.dart';
 import '../widgets/buttons.dart';
@@ -43,7 +44,6 @@ class CollectionScreen extends StatelessWidget {
                       icon: DIcons.back,
                       semanticLabel: 'Back',
                       onTap: () {
-                        scope.audio.tap();
                         Navigator.of(context).pop();
                       },
                     ),
@@ -54,7 +54,7 @@ class CollectionScreen extends StatelessWidget {
                           const SizedBox(height: DS.s4),
                           Text(
                             '${scope.cosmetics.owned.length} of ${Cosmetic.all.length} owned',
-                            style: Type.caption,
+                            style: Type.caption.copyWith(color: DS.textSecondary),
                           ),
                         ],
                       ),
@@ -106,7 +106,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(DS.s4, 0, 0, DS.s12),
-        child: Text(text, style: Type.label),
+        child: Text(text, style: Type.label.copyWith(color: DS.textPrimary)),
       );
 }
 
@@ -149,31 +149,27 @@ class _CardState extends State<_Card> with TickerProviderStateMixin, PressMixin 
     final Cosmetic item = widget.item;
 
     if (scope.cosmetics.owns(item.id)) {
-      scope.audio.tap();
-      scope.haptics.select();
+      Fx.tap(context);
       await scope.cosmetics.equip(item.id);
       return;
     }
     if (item.isChapterReward) {
       // Not for sale. The refusal is informative rather than punishing: the
       // card already says which chapter earns it.
-      scope.audio.reject();
-      scope.haptics.reject();
+      Fx.refuse(context);
       return;
     }
     final bool paid = await scope.wallet.spendCoins(item.price);
     if (!mounted) return;
     if (!paid) {
-      scope.audio.reject();
-      scope.haptics.reject();
+      Fx.refuse(context);
       setState(() => _shake = !_shake);
       return;
     }
     await scope.cosmetics.grant(item.id);
     await scope.cosmetics.equip(item.id);
     if (!mounted) return;
-    scope.audio.unlock();
-    scope.haptics.celebrate();
+    Fx.unlock(context);
   }
 
   @override
@@ -221,7 +217,7 @@ class _CardState extends State<_Card> with TickerProviderStateMixin, PressMixin 
                 const SizedBox(height: DS.s8),
                 Text(item.name, style: Type.bodyStrong.copyWith(fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(item.blurb, style: Type.caption.copyWith(fontSize: 11.5)),
+                Text(item.blurb, style: Type.captionInk.copyWith(fontSize: 11.5)),
                 const SizedBox(height: DS.s8),
                 _Status(
                   item: item,
@@ -304,20 +300,20 @@ class _Status extends StatelessWidget {
     if (item.isChapterReward) {
       return _pill(
         chapterDone ? 'CHAPTER ${item.unlockChapter}' : 'FINISH CHAPTER ${item.unlockChapter}',
-        DS.textTertiary,
+        DS.inkSoft,
         icon: DIcons.lock,
       );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        DIcon(DIcons.coin, size: 12, color: affordable ? DS.gold : DS.textTertiary),
+        DIcon(DIcons.coin, size: 12, color: affordable ? DS.goldDeep : DS.inkSoft),
         const SizedBox(width: DS.s4),
         Text(
           '${item.price}',
           style: Type.numeralSm.copyWith(
             fontSize: 13,
-            color: affordable ? DS.gold : DS.textTertiary,
+            color: affordable ? DS.goldDeep : DS.inkSoft,
           ),
         ),
       ],
@@ -328,7 +324,7 @@ class _Status extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (icon != null) ...<Widget>[DIcon(icon, size: 10, color: c), const SizedBox(width: DS.s4)],
-          Text(text, style: Type.label.copyWith(color: c, fontSize: 9.5, letterSpacing: 1.2)),
+          Text(text, style: Type.labelInk.copyWith(color: c, fontSize: 9.5, letterSpacing: 1.2)),
         ],
       );
 }

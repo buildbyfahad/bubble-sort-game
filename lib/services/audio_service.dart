@@ -37,7 +37,10 @@ class AudioService {
   /// voice each, while board cues arrive in overlapping runs. Giving `drop`
   /// four voices is what lets a four-ball pour sound like four balls.
   static const Map<String, int> _cues = <String, int>{
-    'tap': 1,
+    'tap': 2,
+    'press': 1,
+    'toggle_on': 1,
+    'toggle_off': 1,
     'whoosh': 1,
     'tick': 2,
     'star': 2,
@@ -184,10 +187,17 @@ class AudioService {
 
   // ---------------------------------------------------------------- the cues
 
-  void tap() => _play('tap', volume: 0.55);
-  void whoosh() => _play('whoosh', volume: 0.42);
-  void lift() => _play('lift', volume: 0.62);
-  void reject() => _play('invalid', volume: 0.6);
+  void tap() => _play('tap', volume: 0.7);
+
+  /// The main action on a screen. Fatter and lower than [tap], so a PLAY
+  /// button is audibly a different weight of thing from a close button.
+  void press() => _play('press', volume: 0.85);
+
+  void toggleOn() => _play('toggle_on', volume: 0.7);
+  void toggleOff() => _play('toggle_off', volume: 0.65);
+  void whoosh() => _play('whoosh', volume: 0.6);
+  void lift() => _play('lift', volume: 0.75);
+  void reject() => _play('invalid', volume: 0.7);
   void tick() => _play('tick', volume: 0.5);
   void star() => _play('star', volume: 0.7);
   void unlock() => _play('unlock', volume: 0.75);

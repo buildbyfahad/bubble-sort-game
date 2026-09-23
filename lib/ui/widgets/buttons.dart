@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../../design/tokens.dart';
+import '../feedback.dart';
 import '../../design/typography.dart';
 import 'icons.dart';
 
@@ -88,7 +89,10 @@ class _PrimaryButtonState extends State<PrimaryButton>
       onTapDown: (_) => pressDown(),
       onTapCancel: pressUp,
       onTapUp: (_) => pressUp(),
-      onTap: widget.onTap,
+      onTap: () {
+        Fx.press(context);
+        widget.onTap();
+      },
       child: AnimatedBuilder(
         animation: Listenable.merge(<Listenable>[press, _idle]),
         builder: (BuildContext context, Widget? child) {
@@ -204,7 +208,10 @@ class _GhostIconButtonState extends State<GhostIconButton>
         onTapDown: (_) => pressDown(),
         onTapCancel: pressUp,
         onTapUp: (_) => pressUp(),
-        onTap: widget.onTap,
+        onTap: () {
+          Fx.tap(context);
+          widget.onTap();
+        },
         child: AnimatedBuilder(
           animation: press,
           builder: (BuildContext context, _) {
@@ -295,7 +302,17 @@ class _DockButtonState extends State<DockButton> with TickerProviderStateMixin, 
       onTapDown: widget.enabled ? (_) => pressDown() : null,
       onTapCancel: widget.enabled ? pressUp : null,
       onTapUp: widget.enabled ? (_) => pressUp() : null,
-      onTap: widget.enabled ? widget.onTap : null,
+      onTap: () {
+        if (!widget.enabled) {
+          // A dead control that makes no sound is indistinguishable from a
+          // missed tap. Refusing out loud tells the player the button exists
+          // and is simply not available yet.
+          Fx.refuse(context);
+          return;
+        }
+        Fx.tap(context);
+        widget.onTap();
+      },
       child: AnimatedOpacity(
         duration: DS.tFast,
         opacity: widget.enabled ? 1 : 0.32,
@@ -393,7 +410,10 @@ class _TextActionState extends State<TextAction> with TickerProviderStateMixin, 
       onTapDown: (_) => pressDown(),
       onTapCancel: pressUp,
       onTapUp: (_) => pressUp(),
-      onTap: widget.onTap,
+      onTap: () {
+        Fx.tap(context);
+        widget.onTap();
+      },
       child: AnimatedBuilder(
         animation: press,
         builder: (BuildContext context, _) {

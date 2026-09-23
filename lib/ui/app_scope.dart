@@ -38,6 +38,12 @@ class AppScope extends InheritedWidget {
   final HapticService haptics;
   final AdsService ads;
 
+  /// The scope, or null when there is not one above — a widget rendered in
+  /// isolation by a golden test, for instance. Components use this to fire
+  /// their own feedback without becoming untestable outside an app.
+  static AppScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppScope>();
+
   static AppScope of(BuildContext context) {
     final AppScope? scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
     assert(scope != null, 'AppScope is missing above this widget');

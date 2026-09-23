@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../design/tokens.dart';
+import '../feedback.dart';
 
 /// A switch built to match the rest of the system rather than the platform.
 ///
@@ -24,7 +25,10 @@ class DSwitch extends StatelessWidget {
       toggled: value,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => onChanged(!value),
+        onTap: () {
+          Fx.toggle(context, on: !value);
+          onChanged(!value);
+        },
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: value ? 1 : 0, end: value ? 1 : 0),
           duration: DS.tBase,

@@ -210,6 +210,41 @@ unless the vessels behave differently, in which case they emphatically do not.
 Alongside those, **flow**: consecutive seals without an undo climb a coin
 multiplier to ×2, shown live on the board.
 
+## Feedback
+
+Sound and haptics are a **vocabulary**, not a set of call sites.
+
+They used to be attached wherever someone remembered: an audit found
+`buttons.dart` carrying twenty-eight tap handlers and zero cues, which is
+exactly why play-testing reported that the same control made a noise on one
+screen and none on the next.
+
+Now the *components* fire their own, through
+[`Fx`](lib/ui/feedback.dart). Every entry point pairs a sound with a
+vibration — a cue with no haptic is inaudible on a muted phone, a haptic with
+no cue is invisible on a loud one:
+
+| | Sound | Haptic |
+|---|---|---|
+| `Fx.press` | fat, low pop | medium impact |
+| `Fx.tap` | bright pop | selection click |
+| `Fx.toggle` | rising / falling pair | selection click |
+| `Fx.navigate` | whoosh | selection click |
+| `Fx.refuse` | damped thud | light impact |
+| `Fx.reward` | sparkle ping | medium impact |
+| `Fx.unlock` | rising sweep + ding | heavy impact |
+
+[`feedback_test.dart`](test/feedback_test.dart) enforces it against the
+source: components must fire their own feedback, screens must not play raw
+interface cues, and every `Fx` method must do both halves. It is a rule about
+where code lives, and no runtime assertion can catch it being broken.
+
+The interface cues were also rebuilt. The old ones were designed so that a
+menu tap never announced itself — correct for an app, wrong for a game, where
+the interface noises are part of the toy. Each is now a *pop*: a pitched body
+with a real transient and a downward pitch bend, an octave apart so the
+vocabulary is legible by ear. They are about seven times louder than before.
+
 ## The score
 
 Not one loop but four — pad, bass, drums, melody — at 96 BPM over eight bars,

@@ -81,7 +81,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         size: 38,
                         semanticLabel: 'Close',
                         onTap: () {
-                          scope.audio.tap();
                           Navigator.of(context).pop();
                         },
                       ),
@@ -95,7 +94,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     value: scope.settings.sound,
                     onChanged: (bool v) {
                       scope.settings.setSound(v);
-                      if (v) scope.audio.tap();
                     },
                   ),
                   const _Divider(),
@@ -120,7 +118,6 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     value: scope.settings.haptics,
                     onChanged: (bool v) {
                       scope.settings.setHaptics(v);
-                      if (v) scope.haptics.select();
                     },
                   ),
                   const _Divider(),
@@ -147,7 +144,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   Center(
                     child: Text(
                       'Bubble Sort · ${scope.catalog.length} levels · v1.0',
-                      style: Type.caption.copyWith(color: DS.textTertiary.withValues(alpha: 0.7)),
+                      style: Type.captionInk.copyWith(color: DS.inkSoft.withValues(alpha: 0.75)),
                     ),
                   ),
                 ],
@@ -185,7 +182,7 @@ class _Row extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: DS.s12),
           child: Row(
             children: <Widget>[
-              DIcon(icon, size: 20, color: value ? accent : DS.textTertiary),
+              DIcon(icon, size: 20, color: value ? accent : DS.inkSoft),
               const SizedBox(width: DS.s16),
               Expanded(
                 child: Column(
@@ -193,7 +190,7 @@ class _Row extends StatelessWidget {
                   children: <Widget>[
                     Text(title, style: Type.bodyStrong),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: Type.caption),
+                    Text(subtitle, style: Type.captionInk),
                   ],
                 ),
               ),
@@ -210,5 +207,5 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Container(height: 1, color: const Color(0xFFFFFFFF).withValues(alpha: 0.045));
+      Container(height: 1, color: DS.cardEdge);
 }

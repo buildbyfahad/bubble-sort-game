@@ -122,7 +122,7 @@ void useHandset(WidgetTester tester, {Size size = const Size(393, 852), double d
 Widget harness(Widget child) => Directionality(
       textDirection: TextDirection.ltr,
       child: DefaultTextStyle(
-        style: Type.body,
+        style: Type.body.copyWith(color: DS.textPrimary),
         child: Navigator(
           onGenerateRoute: (RouteSettings s) => PageRouteBuilder<void>(
             pageBuilder: (_, __, ___) => ColoredBox(color: DS.ink, child: child),
