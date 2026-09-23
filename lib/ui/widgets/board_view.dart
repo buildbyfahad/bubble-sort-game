@@ -7,6 +7,7 @@ import '../../design/tokens.dart';
 import '../../engine/board_state.dart';
 import '../../engine/game_controller.dart';
 import 'bubble.dart';
+import 'feedback_layer.dart';
 import 'tube.dart';
 
 /// Resolved layout for one board: how big a ball is, how the vessels are
@@ -167,7 +168,7 @@ class BoardLayout {
 
 /// The board: vessels laid out to fit, plus the overlay that carries balls
 /// between them.
-class BoardView extends StatelessWidget {
+class BoardView extends StatefulWidget {
   const BoardView({
     super.key,
     required this.controller,
@@ -186,6 +187,79 @@ class BoardView extends StatelessWidget {
   final int? guideTube;
 
   @override
+  State<BoardView> createState() => _BoardViewState();
+}
+
+class _BoardViewState extends State<BoardView> with SingleTickerProviderStateMixin {
+  final FeedbackController _fx = FeedbackController();
+  late final AnimationController _shake;
+
+  int _lastSealToken = -1;
+  int _lastFlow = 0;
+  BoardLayout? _layout;
+
+  GameController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _shake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    controller.addListener(_onGame);
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(_onGame);
+    _shake.dispose();
+    _fx.dispose();
+    super.dispose();
+  }
+
+  /// Fires the loud feedback. Reads the controller rather than being told, so
+  /// nothing in the engine has to know this layer exists.
+  void _onGame() {
+    final BoardLayout? l = _layout;
+    if (l == null) return;
+
+    if (controller.sealToken != _lastSealToken && controller.justSealed.isNotEmpty) {
+      _lastSealToken = controller.sealToken;
+      for (final int i in controller.justSealed) {
+        if (i >= l.origins.length) continue;
+        final List<int> contents = controller.state.tubes[i];
+        if (contents.isEmpty) continue;
+        final BubbleHue hue = DS.hues[contents.first];
+        final Offset mouth = l.origins[i] + Offset(l.metrics.width / 2, l.metrics.liftZone);
+        _fx.burst(mouth, hue.light, count: 22, power: 1.15);
+        // Started well clear of the burst: the two effects are the same
+        // event, but overlapping them makes both unreadable.
+        _fx.float(mouth - const Offset(0, 34), 'SEALED', hue.light, scale: 0.78);
+      }
+      // The whole board takes the hit, not just the vessel.
+      _shake.forward(from: 0);
+    }
+
+    if (controller.flow != _lastFlow) {
+      final int was = _lastFlow;
+      _lastFlow = controller.flow;
+      final double m = GameController.multiplierFor(controller.flow);
+      if (controller.flow > was && m > GameController.multiplierFor(was)) {
+        _fx.shout(
+          Offset(l.available.width / 2, l.available.height * 0.42),
+          m >= 2.0 ? 'ON FIRE  ×2' : '×${m == m.roundToDouble() ? m.toInt() : m}',
+          DS.gold,
+        );
+      }
+    }
+  }
+
+  /// Damped oscillation, strongest on the first swing.
+  double _shakeOffset(double t) =>
+      t == 0 ? 0 : math.sin(t * math.pi * 5) * (1 - t) * (1 - t) * 9;
+
+  @override
   Widget build(BuildContext context) {
     // The board subscribes to its own controller rather than trusting an
     // ancestor to rebuild it. Anything that owns game state and paints it
@@ -200,13 +274,20 @@ class BoardView extends StatelessWidget {
             capacity: controller.level.capacity,
             available: Size(c.maxWidth, c.maxHeight),
           );
+          _layout = layout;
 
           final BoardState state = controller.state;
           final List<List<int>> visible = controller.visibleTubes;
           final Pour? flight = controller.flight;
           final int? selected = controller.selected;
 
-          return Stack(
+          return AnimatedBuilder(
+            animation: _shake,
+            builder: (BuildContext context, Widget? board) => Transform.translate(
+              offset: Offset(_shakeOffset(_shake.value), 0),
+              child: board,
+            ),
+            child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
               for (int i = 0; i < layout.tubeCount; i++)
@@ -225,7 +306,7 @@ class BoardView extends StatelessWidget {
                       selected: selected == i,
                       liftCount: selected == i ? state.topRun(i) : 0,
                       sealed: state.isSealed(i) && flight?.to != i,
-                      colorAssist: colorAssist,
+                      colorAssist: widget.colorAssist,
                       rejectToken: controller.rejected == i ? controller.rejectToken : -1,
                       settleToken: _settleTokenFor(i),
                       settleCount: _settleCountFor(i),
@@ -234,8 +315,8 @@ class BoardView extends StatelessWidget {
                       // a board crack alike and no level is a repeat of the last.
                       fractureSeed: i * 31 + controller.level.id * 7,
                       hiddenBelow: state.hiddenBelow[i],
-                      ballStyle: ballStyle,
-                      skin: vesselStyle,
+                      ballStyle: widget.ballStyle,
+                      skin: widget.vesselStyle,
                       narrow: state.isNarrow(i),
                       lockedHue: state.lockedHue(i),
                       hinted: controller.hint?.to == i,
@@ -246,10 +327,10 @@ class BoardView extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (guideTube != null && guideTube! < layout.tubeCount)
+              if (widget.guideTube != null && widget.guideTube! < layout.tubeCount)
                 Positioned(
-                  left: layout.origins[guideTube!].dx,
-                  top: layout.origins[guideTube!].dy,
+                  left: layout.origins[widget.guideTube!].dx,
+                  top: layout.origins[widget.guideTube!].dy,
                   width: layout.metrics.width,
                   height: layout.metrics.totalHeight,
                   child: IgnorePointer(child: _TapGuide(metrics: layout.metrics)),
@@ -262,12 +343,15 @@ class BoardView extends StatelessWidget {
                       layout: layout,
                       pour: flight,
                       destBase: visible[flight.to].length,
-                      colorAssist: colorAssist,
-                      ballStyle: ballStyle,
+                      colorAssist: widget.colorAssist,
+                      ballStyle: widget.ballStyle,
                     ),
                   ),
                 ),
+              // Loud, transient, non-physical. Always on top.
+              Positioned.fill(child: BoardFeedback(controller: _fx)),
             ],
+          ),
           );
         },
       ),

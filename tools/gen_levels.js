@@ -37,42 +37,50 @@ const path = require('path');
 // capacity; 5 is reserved for chapters with fewer colours, because a tall
 // board and a wide board at the same time does not fit a phone.
 const CHAPTERS = [
-  // Early chapters are deliberately SHORT. The opening used to be forty levels
-  // of two and three colours with two spare vessels, which is around thirty
-  // levels of a game that cannot be lost — play-testing bounced off exactly
-  // there, still bored at level 30. A tutorial that outstays its welcome is
-  // the most expensive mistake in the genre, because the player quits before
-  // reaching anything that was designed.
+  // Difficulty here comes from FRAGMENTATION, not from taking spare vessels
+  // away — which is the opposite of what the genre assumes, and is what the
+  // numbers said.
   //
-  // Two things fix it. Chapters 1-3 are 12, 18 and 20 levels rather than 40,
-  // so the ramp arrives sooner and the player also *finishes* something early.
-  // And the single spare vessel — the biggest difficulty lever there is,
-  // bigger than adding a colour — now appears at level 31 instead of 201.
-  { name: 'First Pours',   count: 12, colors: [2, 4],   empties: 2, k: 4 },
-  { name: 'Settling',      count: 18, colors: [4, 5],   empties: 2, k: 4 },
-  { name: 'Narrow Room',   count: 20, colors: [4, 5],   empties: 1, k: 4 },
-  { name: 'Decanting',     count: 25, colors: [5, 6],   empties: 2, k: 4 },
-  { name: 'Sediment',      count: 25, colors: [6, 6],   empties: 1, k: 4 },
-  { name: 'Meniscus',      count: 30, colors: [6, 7],   empties: 2, k: 4 },
-  { name: 'Deep Vessels',  count: 30, colors: [6, 7],   empties: 2, k: 5 },
-  { name: 'Suspension',    count: 35, colors: [7, 7],   empties: 1, k: 4 },
-  { name: 'Titration',     count: 35, colors: [7, 8],   empties: 2, k: 4 },
-  { name: 'Cascade',       count: 40, colors: [8, 8],   empties: 1, k: 4 },
-  { name: 'Decant Deeper', count: 40, colors: [8, 9],   empties: 2, k: 5 },
-  { name: 'Residue',       count: 40, colors: [9, 9],   empties: 1, k: 4 },
-  { name: 'Emulsion',      count: 45, colors: [9, 10],  empties: 2, k: 4 },
-  { name: 'Column',        count: 45, colors: [9, 10],  empties: 2, k: 5 },
-  { name: 'Filtrate',      count: 45, colors: [10, 10], empties: 1, k: 4 },
-  { name: 'Solvent',       count: 45, colors: [10, 11], empties: 2, k: 4 },
-  { name: 'Reflux',        count: 45, colors: [10, 10], empties: 2, k: 5 },
-  { name: 'Precipitate',   count: 45, colors: [11, 11], empties: 1, k: 4 },
-  { name: 'Fractions',     count: 45, colors: [11, 12], empties: 2, k: 4 },
-  { name: 'Saturation',    count: 45, colors: [12, 12], empties: 2, k: 4 },
-  { name: 'Distillate',    count: 45, colors: [11, 11], empties: 2, k: 5 },
-  { name: 'Supernatant',   count: 60, colors: [12, 12], empties: 1, k: 4 },
-  { name: 'Crystalline',   count: 60, colors: [12, 12], empties: 2, k: 5 },
-  { name: 'Azeotrope',     count: 60, colors: [11, 11], empties: 1, k: 5 },
-  { name: 'Equilibrium',   count: 65, colors: [12, 12], empties: 1, k: 5 },
+  // Measured across the previous catalogue, 18% of all balls started already
+  // resting on an identical ball: roughly seven free pours per board, handed
+  // over before the player thought about anything. Dealing under an adjacency
+  // constraint instead (`deal: 'frag'`) makes every ball need moving at least
+  // once, and lifts par from 0.66 pours per ball to about 0.85.
+  //
+  // The catch, and the reason the table looks like this: a fully fragmented
+  // board with ONE spare vessel is essentially unsolvable past six colours —
+  // zero boards in thirty at ten colours, however much the constraint is
+  // relaxed. Fragmentation and spare vessels trade off directly. So the hard
+  // boards here have TWO spares and no free pairs, which is harder than one
+  // spare with seven of them, and the one-spare chapters are kept as variety
+  // rather than as the difficulty ceiling — and early, because a one-spare
+  // board now has a LOWER par than a fragmented two-spare one. Leaving them
+  // at chapters 8 and 12 put a visible dip in the middle of the curve.
+  { name: 'First Pours',   count: 12, colors: [2, 4],   empties: 2, k: 4, deal: 'scramble' },
+  { name: 'Settling',      count: 18, colors: [4, 5],   empties: 2, k: 4, deal: 'frag' },
+  { name: 'Narrow Room',   count: 20, colors: [4, 5],   empties: 1, k: 4, deal: 'scramble' },
+  { name: 'Decanting',     count: 25, colors: [5, 6],   empties: 2, k: 4, deal: 'frag' },
+  { name: 'Sediment',      count: 25, colors: [6, 6],   empties: 1, k: 4, deal: 'scramble' },
+  { name: 'Meniscus',      count: 30, colors: [6, 7],   empties: 2, k: 4, deal: 'frag' },
+  { name: 'Deep Vessels',  count: 30, colors: [6, 7],   empties: 2, k: 5, deal: 'frag' },
+  { name: 'Suspension',    count: 35, colors: [7, 7],   empties: 2, k: 5, deal: 'frag' },
+  { name: 'Titration',     count: 35, colors: [7, 8],   empties: 2, k: 4, deal: 'frag' },
+  { name: 'Cascade',       count: 40, colors: [8, 8],   empties: 2, k: 4, deal: 'frag' },
+  { name: 'Decant Deeper', count: 40, colors: [8, 9],   empties: 2, k: 5, deal: 'frag' },
+  { name: 'Residue',       count: 40, colors: [9, 9],   empties: 2, k: 4, deal: 'frag' },
+  { name: 'Emulsion',      count: 45, colors: [9, 10],  empties: 2, k: 4, deal: 'frag' },
+  { name: 'Column',        count: 45, colors: [9, 10],  empties: 2, k: 5, deal: 'frag' },
+  { name: 'Filtrate',      count: 45, colors: [10, 10], empties: 2, k: 4, deal: 'frag' },
+  { name: 'Solvent',       count: 45, colors: [10, 11], empties: 2, k: 4, deal: 'frag' },
+  { name: 'Reflux',        count: 45, colors: [10, 10], empties: 2, k: 5, deal: 'frag' },
+  { name: 'Precipitate',   count: 45, colors: [11, 11], empties: 2, k: 4, deal: 'frag' },
+  { name: 'Fractions',     count: 45, colors: [11, 12], empties: 2, k: 4, deal: 'frag' },
+  { name: 'Saturation',    count: 45, colors: [12, 12], empties: 2, k: 4, deal: 'frag' },
+  { name: 'Distillate',    count: 45, colors: [11, 11], empties: 2, k: 5, deal: 'frag' },
+  { name: 'Supernatant',   count: 60, colors: [12, 12], empties: 2, k: 4, deal: 'frag' },
+  { name: 'Crystalline',   count: 60, colors: [12, 12], empties: 2, k: 5, deal: 'frag' },
+  { name: 'Azeotrope',     count: 60, colors: [11, 11], empties: 2, k: 5, deal: 'frag' },
+  { name: 'Equilibrium',   count: 65, colors: [12, 12], empties: 2, k: 5, deal: 'frag' },
 ];
 
 const PER_CHAPTER = 40; // legacy default, only used if a chapter omits `count`
@@ -373,7 +381,13 @@ function planTraits(ci, pos, count, tubeCount, colors, k, mode, rand, empties) {
       used.add(target);
       // In the solved state vessel `c` holds colour `c`; a spare holds
       // nothing, so it may be locked to any hue.
-      const hue = target < colors ? target : (rand() * colors) | 0;
+      // Two vessels locked to the same hue cannot both be filled with it in
+      // any solution, so the board would be unsolvable by construction.
+      const taken = new Set(
+          traits.map((t) => (t >> 1) - 1).filter((h) => h >= 0));
+      let hue = target < colors ? target : (rand() * colors) | 0;
+      for (let g = 0; g < colors && taken.has(hue); g++) hue = (hue + 1) % colors;
+      if (taken.has(hue)) continue;
       traits[target] = (traits[target] & 1) | ((hue + 1) << 1);
     }
   }
@@ -394,6 +408,57 @@ function encodeTraits(traits) {
 }
 
 // -------------------------------------------------------------- generation
+
+/**
+ * Deals a board with no two identical balls touching.
+ *
+ * This replaces reverse-scrambling for everything past the opening chapters,
+ * and it is the single most important change to how hard this game is.
+ *
+ * A random scramble leaves identical balls stacked on each other by chance —
+ * measured across the old catalogue, 18% of all balls started already paired,
+ * which is ~7.5 free pours handed to the player before they think about
+ * anything. Every such pair is a move that makes itself. Dealing under an
+ * adjacency constraint instead produces boards where *every* ball must be
+ * moved at least once, which is the definition of the hardest board of a
+ * given size.
+ *
+ * Solvability is not assumed — as with the scramble, the solver is still the
+ * gate, and fragmented boards are rejected more often.
+ */
+function dealFragmented(colors, k, empties, rand, maxTries = 300) {
+  for (let attempt = 0; attempt < maxTries; attempt++) {
+    const pool = [];
+    for (let c = 0; c < colors; c++) for (let i = 0; i < k; i++) pool.push(c);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = (rand() * (i + 1)) | 0;
+      const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    }
+
+    const s = [];
+    for (let i = 0; i < colors; i++) s.push([]);
+    let ok = true;
+    // Layer by layer rather than vessel by vessel, so no single vessel is
+    // dealt from an already-depleted pool and forced into a pair at the end.
+    for (let slot = 0; slot < k && ok; slot++) {
+      for (let v = 0; v < colors && ok; v++) {
+        let idx = -1;
+        for (let p = 0; p < pool.length; p++) {
+          if (!s[v].length || pool[p] !== s[v][s[v].length - 1]) { idx = p; break; }
+        }
+        if (idx < 0) { ok = false; break; }
+        s[v].push(pool.splice(idx, 1)[0]);
+      }
+    }
+    if (!ok || pool.length) continue;
+    for (let e = 0; e < empties; e++) s.push([]);
+    return s;
+  }
+  return null;
+}
+
+/** Fraction of balls that are NOT resting on an identical ball. 1 = hardest. */
+const fragmentation = (s, balls) => runCount(s) / balls;
 
 /**
  * Reverse-scramble from the solved state.
@@ -468,6 +533,7 @@ const chapters = [];
 let exactCount = 0;
 let rejected = 0;
 let droppedObstacles = 0;
+let fragSum = 0;
 let id = 0;
 
 for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
@@ -475,6 +541,7 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
   const count = Math.min(spec.count || PER_CHAPTER, TOTAL - id);
   const rand = rng((0x9e3779b9 ^ Math.imul(ci + 1, 2654435761)) >>> 0);
   const candidates = [];
+  fragSum = 0;
 
   for (let n = 0; n < count; n++) {
     const t = count === 1 ? 0 : n / (count - 1);
@@ -505,11 +572,25 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     // "last" and "hardest" are the same level. Generated last in the loop, so
     // every other candidate's par is known by now.
     const chapterMaxPar = candidates.reduce((m, c) => Math.max(m, c.par), 0);
+    // Fragmentation floor. Dealt boards are 1.0 by construction; scrambled
+    // ones are pushed as high as the scramble can reach, which measurement
+    // puts a little above 0.9 for a one-spare board.
+    const fragFloor = ci === 0
+        ? 0.55 + 0.25 * t
+        : (spec.deal === 'frag' ? 0.999 : 0.88);
+
+    // Par floor, now measured against BALLS rather than colours — the old
+    // floor was `colours * ~2`, which on a twelve-colour board asked for 24
+    // pours when the board could sustain 40.
+    // Measured ceilings differ sharply by dealer: a fragmented board reaches
+    // about 0.85 pours per ball, a scrambled one about 0.66. One floor for
+    // both asks the scramble for a board it cannot make.
+    const parCeil = spec.deal === 'frag' ? 0.85 : 0.66;
     const parFloor = ci === 0 && n < 4
         ? 0
         : isBoss
-            ? Math.max(chapterMaxPar, Math.round(colors * 2.0))
-            : Math.round(colors * (1.15 + 0.85 * t));
+            ? Math.max(chapterMaxPar, Math.round(balls * parCeil * 0.92))
+            : Math.round(balls * parCeil * (0.72 + 0.20 * t));
 
     // Planned before the scramble so the solve runs under the same rules the
     // player will.
@@ -522,14 +603,29 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     // capacity five the search space is deep enough that a board over the
     // chapter's max par may simply not turn up. Keep the hardest one seen.
     let bestSeen = null;
-    for (let attempt = 0; attempt < (isBoss ? 4000 : 800) && !accepted; attempt++) {
+
+    // The fragmentation floor is a target too, relaxed in steps if the board
+    // cannot meet it. A one-spare board at nine colours simply cannot be
+    // scrambled to 88% and stay solvable — the two constraints fight, and
+    // fragmentation is the one that has to give, because an unsolvable level
+    // is not a hard level.
+    let floor = fragFloor;
+    let pf = parFloor;
+    for (let relax = 0; relax < 8 && !accepted; relax++, floor -= 0.05, pf -= Math.max(1, Math.round(balls * 0.04))) {
+    for (let attempt = 0; attempt < (isBoss ? 1200 : 260) && !accepted; attempt++) {
       const jitter = Math.round((rand() - 0.5) * 6);
-      const cand = withTraits(
-          traits,
-          () => build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand));
+      const cand = withTraits(traits, () => spec.deal === 'frag'
+          ? dealFragmented(colors, spec.k, spec.empties, rand)
+          : build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand));
       if (!cand) continue;
       if (isDone(cand, spec.k)) continue;
       if (mixedness(cand) < colors + Math.min(colors, 3)) continue;
+
+      // Reject the boards that hand out free pours. A scrambled board has no
+      // control over how many identical balls end up touching, so the floor
+      // is applied after the fact; a dealt board is at 1.0 by construction
+      // and passes trivially.
+      if (fragmentation(cand, balls) < floor) { rejected++; continue; }
 
       // The acceptance test *is* the solve. A board nothing can finish never
       // reaches a player.
@@ -539,12 +635,13 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
         board: cand, colors, par: solved.par, exact: solved.exact,
         boss: isBoss, traits,
       };
-      if (solved.par < parFloor) {
+      if (solved.par < pf) {
         if (isBoss && (!bestSeen || found.par > bestSeen.par)) bestSeen = found;
         rejected++;
         continue;
       }
       accepted = found;
+    }
     }
     if (!accepted && isBoss && bestSeen) accepted = bestSeen;
 
@@ -556,13 +653,13 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       const plain = new Array(traits.length).fill(0);
       for (let attempt = 0; attempt < 800 && !accepted; attempt++) {
         const jitter = Math.round((rand() - 0.5) * 6);
-        const cand = withTraits(
-            plain,
-            () => build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand));
+        const cand = withTraits(plain, () => spec.deal === 'frag'
+            ? dealFragmented(colors, spec.k, spec.empties, rand)
+            : build(colors, spec.empties, spec.k, Math.max(3, target + jitter), rand));
         if (!cand || isDone(cand, spec.k)) continue;
         if (mixedness(cand) < colors + Math.min(colors, 3)) continue;
         const solved = withTraits(plain, () => solve(cand, spec.k, colors));
-        if (!solved || solved.par < parFloor) { rejected++; continue; }
+        if (!solved || solved.par < pf) { rejected++; continue; }
         accepted = {
           board: cand, colors, par: solved.par, exact: solved.exact,
           boss: isBoss, traits: plain,
@@ -574,7 +671,11 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
       console.error(`chapter ${ci + 1}: no solvable board for slot ${n}`);
       process.exit(1);
     }
+    fragSum += fragmentation(accepted.board, accepted.colors * spec.k);
     candidates.push(accepted);
+    if (process.env.GEN_VERBOSE) {
+      process.stderr.write(`\r  ch${String(ci + 1).padStart(2)} ${n + 1}/${count}   `);
+    }
   }
 
   // Order the chapter by its own difficulty, so the ramp inside a chapter is
@@ -629,7 +730,8 @@ for (let ci = 0; ci < CHAPTERS.length && id < TOTAL; ci++) {
     `chapter ${String(ci + 1).padStart(2)} ${spec.name.padEnd(14)} ` +
       `levels ${String(first).padStart(4)}-${String(id).padStart(4)}  ` +
       `colours ${spec.colors.join('-')} spare ${spec.empties} cap ${spec.k}  ` +
-      `par ${candidates[0].par}-${candidates[candidates.length - 1].par}`,
+      `par ${candidates[0].par}-${candidates[candidates.length - 1].par}  ` +
+      `frag ${(100 * fragSum / candidates.length).toFixed(0)}%`,
   );
 }
 
