@@ -555,6 +555,12 @@ class _Chip extends StatelessWidget {
 /// A chapter gate. Breaks the road, names the stretch ahead, and carries that
 /// stretch's own completion count — so a player forty levels deep still has a
 /// nearby, finishable target.
+/// A chapter gate, drawn as a ribbon.
+///
+/// It was a rounded card with three lines of text in it, which is a *label*.
+/// A chapter is a milestone, and a milestone on a game map is a banner: a
+/// plate with swallowtail ends and folded tails behind it. The road runs
+/// behind it, so the player passes through rather than past.
 class _ChapterBanner extends StatelessWidget {
   const _ChapterBanner({
     required this.chapter,
@@ -572,69 +578,143 @@ class _ChapterBanner extends StatelessWidget {
     final Color accent = complete ? DS.aqua : (reached ? DS.gold : DS.textTertiary);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(DS.s20, DS.s16, DS.s20, DS.s12),
+      // Wide margins: the ribbon's tails hang outside its own box, and at
+      // the old padding they ran off the screen.
+      padding: const EdgeInsets.fromLTRB(DS.s40, DS.s20, DS.s40, DS.s12),
       child: Opacity(
         opacity: reached ? 1 : 0.55,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: DS.s20, vertical: DS.s12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(DS.rLg),
-            // A solid plate rather than a rule with a word on it. The road
-            // runs behind it, so the chapter reads as a gate the player
-            // passes through — which is what a chapter is.
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[
-                Color.lerp(DS.card, accent, 0.10)!,
-                Color.lerp(DS.cardSoft, accent, 0.18)!,
+        child: CustomPaint(
+          painter: _RibbonPainter(accent: accent, lit: reached),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(DS.s24, DS.s12, DS.s24, DS.s16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'CHAPTER ${chapter.number.toString().padLeft(2, '0')}',
+                  style: Type.label.copyWith(
+                    color: DS.textPrimary.withValues(alpha: 0.75),
+                    letterSpacing: 1.6,
+                  ),
+                ),
+                const SizedBox(height: DS.s4),
+                Text(
+                  chapter.name,
+                  style: Type.titleMd.copyWith(
+                    fontSize: 23,
+                    color: DS.textPrimary,
+                    shadows: <Shadow>[
+                      Shadow(color: DS.outline, blurRadius: 0, offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.s8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    if (complete) ...<Widget>[
+                      const DIcon(DIcons.check, size: 12, color: DS.textPrimary),
+                      const SizedBox(width: DS.s4),
+                    ] else if (!reached) ...<Widget>[
+                      const DIcon(DIcons.lock, size: 12, color: DS.textPrimary),
+                      const SizedBox(width: DS.s4),
+                    ],
+                    Text(
+                      '$cleared / ${chapter.length}',
+                      style: Type.label.copyWith(
+                        color: DS.textPrimary.withValues(alpha: 0.85),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-            border: Border.all(color: accent.withValues(alpha: 0.55), width: 2),
-            boxShadow: DS.e2,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                'CHAPTER ${chapter.number.toString().padLeft(2, '0')}',
-                style: Type.label.copyWith(
-                  color: Color.lerp(accent, DS.inkStrong, 0.35),
-                  letterSpacing: 1.6,
-                ),
-              ),
-              const SizedBox(height: DS.s4),
-              Text(
-                chapter.name,
-                style: Type.titleMd.copyWith(fontSize: 22, color: DS.inkStrong),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.s8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  if (complete) ...<Widget>[
-                    const DIcon(DIcons.check, size: 12, color: DS.aquaDeep),
-                    const SizedBox(width: DS.s4),
-                  ] else if (!reached) ...<Widget>[
-                    const DIcon(DIcons.lock, size: 12, color: DS.inkSoft),
-                    const SizedBox(width: DS.s4),
-                  ],
-                  Text(
-                    '$cleared / ${chapter.length}',
-                    style: Type.label.copyWith(
-                      color: complete ? DS.aquaDeep : DS.inkSoft,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ),
       ),
     );
   }
+}
+
+class _RibbonPainter extends CustomPainter {
+  _RibbonPainter({required this.accent, required this.lit});
+
+  final Color accent;
+  final bool lit;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    const double tail = 26;
+    const double notch = 14;
+
+    // The folded tails behind, darker, so the banner reads as cloth with
+    // something behind it rather than as a cut-out shape.
+    for (final bool left in <bool>[true, false]) {
+      final double x = left ? 0 : w;
+      final double dir = left ? 1 : -1;
+      final Path t = Path()
+        ..moveTo(x + dir * tail * 0.4, h * 0.16)
+        ..lineTo(x + dir * tail * 0.4, h * 0.86)
+        ..lineTo(x - dir * tail * 0.55, h * 0.72)
+        ..lineTo(x - dir * tail * 0.55, h * 0.30)
+        ..close();
+      canvas.drawPath(t, Paint()..color = DS.outline);
+      canvas.drawPath(
+        t.shift(Offset(dir * 2, 0)),
+        Paint()..color = Color.lerp(accent, DS.outline, 0.45)!,
+      );
+    }
+
+    // The plate: a rectangle with swallowtail ends.
+    final Path plate = Path()
+      ..moveTo(tail, 0)
+      ..lineTo(w - tail, 0)
+      ..lineTo(w, 0)
+      ..lineTo(w - notch, h / 2)
+      ..lineTo(w, h)
+      ..lineTo(tail, h)
+      ..lineTo(0, h)
+      ..lineTo(notch, h / 2)
+      ..lineTo(0, 0)
+      ..close();
+
+    canvas.drawPath(
+      plate,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = DS.stroke * 2
+        ..strokeJoin = StrokeJoin.round
+        ..color = DS.outline,
+    );
+    canvas.drawPath(
+      plate,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(0, 0),
+          Offset(0, h),
+          <Color>[
+            Color.lerp(accent, const Color(0xFFFFFFFF), lit ? 0.22 : 0.05)!,
+            Color.lerp(accent, DS.outline, 0.42)!,
+          ],
+        ),
+    );
+    // A highlight along the top fold.
+    canvas.drawLine(
+      Offset(notch + 6, 5),
+      Offset(w - notch - 6, 5),
+      Paint()
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: lit ? 0.30 : 0.10),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RibbonPainter old) => old.accent != accent || old.lit != lit;
 }
 
 // -------------------------------------------------------------------- road
@@ -959,6 +1039,15 @@ class _LevelNodeState extends State<_LevelNode> with TickerProviderStateMixin, P
     return widget.unlocked ? DS.textSecondary : DS.textTertiary;
   }
 
+  /// How many stars a cleared level shows. Three tiers, and a cleared level
+  /// always shows at least one — the grade says how *well*, never whether.
+  int get _stars => switch (widget.grade) {
+        ClearGrade.flawless => 3,
+        ClearGrade.great => 2,
+        ClearGrade.clear => 1,
+        null => 0,
+      };
+
   @override
   Widget build(BuildContext context) {
     final Color accent = _accent;
@@ -972,43 +1061,42 @@ class _LevelNodeState extends State<_LevelNode> with TickerProviderStateMixin, P
       child: AnimatedBuilder(
         animation: Listenable.merge(<Listenable>[press, if (widget.isCurrent) widget.pulse]),
         builder: (BuildContext context, _) {
-          final double breathe =
-              widget.isCurrent ? 0.5 + 0.5 * math.sin(widget.pulse.value * math.pi * 2) : 0.0;
+          final double t = widget.isCurrent ? widget.pulse.value : 0.0;
+          final double breathe = widget.isCurrent ? 0.5 + 0.5 * math.sin(t * math.pi * 2) : 0.0;
+          // The one node the player is meant to press bobs. Nothing else on
+          // the screen moves, so the eye goes there without being told.
+          final double bob = widget.isCurrent ? math.sin(t * math.pi * 2) * 3.0 : 0.0;
 
-          return Transform.scale(
-            scale: (1 - press.value * 0.07) * (widget.isCurrent ? 1.10 : 1.0),
-            child: CustomPaint(
-              painter: _NodePainter(
-                accent: accent,
-                cleared: widget.cleared,
-                unlocked: widget.unlocked,
-                isCurrent: widget.isCurrent,
-                breathe: breathe,
-              ),
-              child: Center(
-                child: widget.unlocked
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            '${widget.id}',
-                            style: Type.numeral.copyWith(
-                              fontSize: widget.id > 999 ? 17 : 20,
-                              color: widget.isCurrent ? DS.gold : DS.textPrimary,
-                            ),
+          return Transform.translate(
+            offset: Offset(0, bob),
+            child: Transform.scale(
+              scale: (1 - press.value.clamp(0.0, 1.0) * 0.07) *
+                  (widget.isCurrent ? 1.14 : 1.0),
+              child: CustomPaint(
+                painter: _NodePainter(
+                  accent: accent,
+                  cleared: widget.cleared,
+                  unlocked: widget.unlocked,
+                  isCurrent: widget.isCurrent,
+                  breathe: breathe,
+                  spin: t,
+                  stars: _stars,
+                ),
+                child: Center(
+                  child: widget.unlocked
+                      ? Text(
+                          '${widget.id}',
+                          style: Type.numeral.copyWith(
+                            fontSize: widget.id > 999 ? 18 : 22,
+                            color: widget.isCurrent ? DS.gold : DS.textPrimary,
+                            shadows: <Shadow>[
+                              Shadow(color: DS.outline, blurRadius: 0, offset: const Offset(0, 2)),
+                            ],
                           ),
-                          if (widget.cleared && widget.best != null)
-                            Text(
-                              '${widget.best}',
-                              style: Type.label.copyWith(
-                                fontSize: 9,
-                                color: accent,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                        ],
-                      )
-                    : DIcon(DIcons.lock, size: 17, color: DS.textTertiary.withValues(alpha: 0.8)),
+                        )
+                      : DIcon(DIcons.lock,
+                          size: 18, color: DS.textTertiary.withValues(alpha: 0.8)),
+                ),
               ),
             ),
           );
@@ -1018,6 +1106,17 @@ class _LevelNodeState extends State<_LevelNode> with TickerProviderStateMixin, P
   }
 }
 
+/// A level on the road, drawn as an object rather than a disc.
+///
+/// The node used to be a circle with a number in it. That is a diagram. A
+/// level on a game map is a *thing*: it has a frame, it carries its result
+/// where the eye lands first, and the one you are meant to press announces
+/// itself. Three treatments, and they differ in construction rather than only
+/// in colour:
+///
+///   locked    a flat slug, sunk into the road, no frame
+///   cleared   a framed medallion with its stars above it
+///   current   a gold-crowned medallion with rays turning behind it
 class _NodePainter extends CustomPainter {
   _NodePainter({
     required this.accent,
@@ -1025,6 +1124,8 @@ class _NodePainter extends CustomPainter {
     required this.unlocked,
     required this.isCurrent,
     required this.breathe,
+    required this.spin,
+    required this.stars,
   });
 
   final Color accent;
@@ -1033,98 +1134,173 @@ class _NodePainter extends CustomPainter {
   final bool isCurrent;
   final double breathe;
 
+  /// 0..1, one full turn of the rays behind the current node.
+  final double spin;
+
+  /// 0-3, shown above a cleared node.
+  final int stars;
+
   @override
   void paint(Canvas canvas, Size size) {
     final Offset c = size.center(Offset.zero);
     final double r = size.width / 2;
 
-    // The current node throws light onto the road around it. It is the only
-    // lit thing on the map, which is what makes "where am I" a non-question.
-    if (isCurrent) {
-      canvas.drawCircle(
-        c,
-        r * (1.5 + breathe * 0.34),
-        Paint()
-          ..color = DS.gold.withValues(alpha: 0.16 + breathe * 0.10)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.55),
-      );
-      canvas.drawCircle(
-        c,
-        r * (1.02 + breathe * 0.20),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6 * (1 - breathe * 0.5)
-          ..color = DS.gold.withValues(alpha: 0.45 * (1 - breathe)),
-      );
-    }
+    if (isCurrent) _paintRays(canvas, c, r);
 
-    // Contact shadow, so the medallion sits on the road rather than floating
-    // over it.
+    // --- the drop the node sits in ----------------------------------------
     canvas.drawCircle(
-      c + Offset(0, r * 0.18),
+      c + Offset(0, r * 0.16),
       r * 0.92,
       Paint()
-        ..color = DS.inkDeep.withValues(alpha: 0.55)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.22),
+        ..color = DS.outline.withValues(alpha: 0.55)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.18),
     );
 
-    // The stroke first, as a slightly larger disc behind the face — every
-    // element in the game is a fill plus an outline.
+    // --- outline, then body -----------------------------------------------
+    final double body = r * 0.82;
+    canvas.drawCircle(c, body + DS.stroke, Paint()..color = DS.outline);
     canvas.drawCircle(
       c,
-      r * 0.88 + DS.stroke,
-      Paint()..color = DS.outline,
-    );
-
-    // Body: lit from above, like everything else in the game.
-    canvas.drawCircle(
-      c,
-      r * 0.88,
+      body,
       Paint()
         ..shader = ui.Gradient.linear(
-          Offset(c.dx, c.dy - r),
-          Offset(c.dx, c.dy + r),
+          Offset(c.dx, c.dy - body),
+          Offset(c.dx, c.dy + body),
           <Color>[
-            Color.lerp(DS.surfaceHigh, accent, unlocked ? 0.16 : 0.02)!,
-            DS.surface,
+            Color.lerp(DS.surfaceHigh, accent, unlocked ? 0.22 : 0.04)!,
+            Color.lerp(DS.ink, accent, unlocked ? 0.06 : 0.0)!,
           ],
         ),
     );
 
-    // Rim. Thickest and brightest on the node the player should press.
-    canvas.drawCircle(
-      c,
-      r * 0.88,
+    // A bright arc along the top inside edge — the node catches the same
+    // light as everything else in the game.
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: body * 0.86),
+      math.pi * 1.15,
+      math.pi * 0.7,
+      false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = isCurrent ? 2.6 : (cleared ? 1.8 : 1.2)
-        ..color = accent.withValues(alpha: unlocked ? (isCurrent ? 0.95 : 0.55) : 0.22),
+        ..strokeWidth = body * 0.10
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: unlocked ? 0.16 : 0.05),
     );
 
-    // A cleared node gets a ring segment rather than a badge: it reads as a
-    // completed gauge, and it does not cover the number the way a tick would.
-    if (cleared) {
-      canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r * 0.78),
-        -math.pi / 2,
-        math.pi * 2,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.2
-          ..color = accent.withValues(alpha: 0.30),
+    // --- the frame ---------------------------------------------------------
+    if (cleared || isCurrent) _paintFrame(canvas, c, body);
+
+    // --- stars -------------------------------------------------------------
+    if (stars > 0) _paintStars(canvas, c, r);
+  }
+
+  /// Rays turning behind the one node the player should press. Slow, and
+  /// alternating long and short so it reads as a burst rather than a fan.
+  void _paintRays(Canvas canvas, Offset c, double r) {
+    const int count = 12;
+    final double glow = 0.20 + breathe * 0.14;
+    canvas.drawCircle(
+      c,
+      r * (1.45 + breathe * 0.22),
+      Paint()
+        ..color = DS.gold.withValues(alpha: glow * 0.55)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.6),
+    );
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(spin * math.pi * 0.5);
+    for (int i = 0; i < count; i++) {
+      final double a = i * 2 * math.pi / count;
+      final double len = r * (i.isEven ? 1.62 : 1.34);
+      final Path ray = Path()
+        ..moveTo(math.cos(a - 0.07) * r * 0.95, math.sin(a - 0.07) * r * 0.95)
+        ..lineTo(math.cos(a) * len, math.sin(a) * len)
+        ..lineTo(math.cos(a + 0.07) * r * 0.95, math.sin(a + 0.07) * r * 0.95)
+        ..close();
+      canvas.drawPath(
+        ray,
+        Paint()..color = DS.gold.withValues(alpha: (i.isEven ? 0.26 : 0.15) * (0.6 + breathe * 0.4)),
       );
     }
+    canvas.restore();
+  }
 
-    // Specular pip, top-left. One highlight is what separates a disc from a
-    // dome.
+  /// A ring with studs around it — the detail that makes a node read as a
+  /// minted object rather than a stroked circle.
+  void _paintFrame(Canvas canvas, Offset c, double body) {
+    final double ring = body + DS.stroke * 0.5;
     canvas.drawCircle(
-      c + Offset(-r * 0.30, -r * 0.36),
-      r * 0.20,
+      c,
+      ring,
       Paint()
-        ..color = const Color(0xFFFFFFFF).withValues(alpha: unlocked ? 0.10 : 0.04)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.18),
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isCurrent ? 4.0 : 3.0
+        ..color = accent,
     );
+    canvas.drawCircle(
+      c,
+      ring - 4,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = accent.withValues(alpha: 0.35),
+    );
+    final int studs = isCurrent ? 12 : 8;
+    for (int i = 0; i < studs; i++) {
+      final double a = i * 2 * math.pi / studs - math.pi / 2;
+      canvas.drawCircle(
+        c + Offset(math.cos(a), math.sin(a)) * ring,
+        isCurrent ? 2.6 : 2.0,
+        Paint()..color = accent,
+      );
+      canvas.drawCircle(
+        c + Offset(math.cos(a), math.sin(a)) * ring,
+        isCurrent ? 1.3 : 1.0,
+        Paint()..color = DS.outline.withValues(alpha: 0.5),
+      );
+    }
+  }
+
+  /// Stars, arched over the node.
+  ///
+  /// The design notes argued against stars on the clear sheet — a row of them
+  /// implies an incomplete result whenever the player does not get three. On
+  /// a *map* the argument inverts: the player is looking back at forty levels
+  /// at once and wants to see, at a glance, which ones are worth returning
+  /// to. Nothing else reads that fast.
+  void _paintStars(Canvas canvas, Offset c, double r) {
+    final double arc = r * 0.94;
+    for (int i = 0; i < 3; i++) {
+      final double a = -math.pi / 2 + (i - 1) * 0.52;
+      final Offset p = c + Offset(math.cos(a), math.sin(a)) * arc;
+      final bool earned = i < stars;
+      _star(
+        canvas,
+        p,
+        earned ? 7.2 : 5.6,
+        earned ? DS.gold : DS.ink.withValues(alpha: 0.75),
+      );
+    }
+  }
+
+  void _star(Canvas canvas, Offset c, double radius, Color colour) {
+    final Path p = Path();
+    for (int i = 0; i < 10; i++) {
+      final double a = -math.pi / 2 + i * math.pi / 5;
+      final double rr = i.isEven ? radius : radius * 0.46;
+      final Offset pt = c + Offset(math.cos(a) * rr, math.sin(a) * rr);
+      i == 0 ? p.moveTo(pt.dx, pt.dy) : p.lineTo(pt.dx, pt.dy);
+    }
+    p.close();
+    canvas.drawPath(
+      p,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = DS.stroke
+        ..strokeJoin = StrokeJoin.round
+        ..color = DS.outline,
+    );
+    canvas.drawPath(p, Paint()..color = colour);
   }
 
   @override
@@ -1133,6 +1309,8 @@ class _NodePainter extends CustomPainter {
       old.cleared != cleared ||
       old.unlocked != unlocked ||
       old.isCurrent != isCurrent ||
+      old.stars != stars ||
+      old.spin != spin ||
       old.breathe != breathe;
 }
 

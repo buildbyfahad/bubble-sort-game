@@ -172,6 +172,26 @@ class _AmbientPainter extends CustomPainter {
       0.055,
     );
 
+    // Layered arcs low on the screen — a horizon. A gradient alone is a
+    // wash; three overlapping curves give the ground somewhere to be, and
+    // are most of the difference between a background and a backdrop.
+    for (int i = 0; i < 3; i++) {
+      final double lift = 0.74 + i * 0.09;
+      final double bow = w * (0.85 - i * 0.12);
+      final Path hill = Path()
+        ..moveTo(-w * 0.2, h)
+        ..lineTo(-w * 0.2, h * lift + bow * 0.10)
+        ..quadraticBezierTo(w * 0.5, h * lift - bow * 0.16, w * 1.2, h * lift + bow * 0.10)
+        ..lineTo(w * 1.2, h)
+        ..close();
+      canvas.drawPath(
+        hill,
+        Paint()
+          ..color = Color.lerp(atmosphere.deep, DS.inkDeep, 0.25 + i * 0.16)!
+              .withValues(alpha: 0.20 + i * 0.10),
+      );
+    }
+
     // Vignette. Pulls the eye to the centre and keeps the colour fields from
     // bleeding off the edges as bright smears.
     canvas.drawRect(
