@@ -4,6 +4,31 @@ A colour-sorting puzzle. Familiar mechanic, entirely original product identity:
 name, mark, palette, typography, vessel and ball rendering, motion, icon set and
 sound are all authored here and reference no existing game.
 
+## A note on the palette change
+
+This document previously argued for a near-black ground with a single gold
+accent, on the reasoning that the whole category is bright candy on white and
+inverting it was the signature.
+
+That was wrong for this product, and play-testing said so plainly: *"UI/UX is
+still off — if the game is good but the UI is off, the user goes away."* The
+old palette produced something genuinely sophisticated and, in the hand, cold —
+a premium finance app that happened to contain a puzzle. Someone who downloads
+a colour-sorting game to relax is not looking for restraint.
+
+The ground is now a **bright violet sky**. Panels and vessels stayed dark,
+deliberately: twelve ball hues have to remain separable and every one of them
+reads more cleanly against a dark vessel than a light one. The brightness went
+into the world *behind* the board, where it costs the puzzle nothing, and the
+board now sits on a lit platform rather than floating in a void — a play field
+that is not a place is the difference between a game and a diagram.
+
+Buttons are drawn as a face over a darker body that the press sinks into. The
+old document called a bevel "the fastest way to date a button by a decade",
+which is true of an app and exactly backwards for a game: the sunk-face button
+is the most recognisable control in the category, and a flat one reads as a
+link.
+
 ---
 
 ## 1. Visual direction

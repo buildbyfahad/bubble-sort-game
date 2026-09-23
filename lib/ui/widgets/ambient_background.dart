@@ -59,7 +59,24 @@ class _AmbientBackgroundState extends State<AmbientBackground>
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        const ColoredBox(color: DS.ink),
+        // The sky. A vertical gradient rather than a flat fill: a bright
+        // ground with no gradient in it reads as a swatch, and the whole
+        // point of going bright is that the screen should feel like a place.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                Color.lerp(DS.skyTop, widget.atmosphere.warm, 0.22)!,
+                Color.lerp(DS.skyMid, widget.atmosphere.cool, 0.16)!,
+                Color.lerp(DS.skyDeep, widget.atmosphere.deep, 0.30)!,
+              ],
+              stops: const <double>[0.0, 0.52, 1.0],
+            ),
+          ),
+          child: const SizedBox.expand(),
+        ),
         RepaintBoundary(
           child: AnimatedBuilder(
             animation: _c,
@@ -107,13 +124,15 @@ class _AmbientPainter extends CustomPainter {
           centre,
           radius,
           <Color>[
-            color.withValues(alpha: alpha * intensity),
-            color.withValues(alpha: alpha * intensity * 0.35),
+            color.withValues(alpha: alpha * intensity * 1.6),
+            color.withValues(alpha: alpha * intensity * 0.55),
             color.withValues(alpha: 0),
           ],
           <double>[0.0, 0.45, 1.0],
         )
-        ..blendMode = BlendMode.plus,
+        // Soft-light rather than plus: additive blending on an already-bright
+        // ground blows straight out to white.
+        ..blendMode = BlendMode.softLight,
     );
   }
 
@@ -164,7 +183,7 @@ class _AmbientPainter extends CustomPainter {
           <Color>[
             const Color(0x00000000),
             const Color(0x00000000),
-            DS.inkDeep.withValues(alpha: 0.55),
+            DS.skyDeep.withValues(alpha: 0.72),
           ],
           <double>[0.0, 0.55, 1.0],
         ),

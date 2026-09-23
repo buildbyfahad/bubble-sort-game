@@ -44,25 +44,27 @@ class Type {
 
   /// The wordmark. Light weight at a large size with generous tracking is what
   /// separates a considered logotype from a bold-sans app title.
-  static TextStyle get wordmark => _sora(39, 300, spacing: 12.0, height: 1.0);
+  // Weight 300 was drawn for a near-black ground, where a hairline reads as
+  // elegant. On a bright violet sky it simply disappears.
+  static TextStyle get wordmark => _sora(39, 800, spacing: 8.0, height: 1.0);
 
-  static TextStyle get titleLg => _sora(28, 600, spacing: -0.2, height: 1.15);
-  static TextStyle get titleMd => _sora(21, 600, spacing: -0.1, height: 1.2);
+  static TextStyle get titleLg => _sora(30, 800, spacing: -0.4, height: 1.1);
+  static TextStyle get titleMd => _sora(22, 700, spacing: -0.2, height: 1.18);
 
   /// Large numerals — level numbers, counters.
-  static TextStyle get numeral => _sora(34, 500, spacing: -1.0, height: 1.0);
-  static TextStyle get numeralSm => _sora(17, 500, spacing: -0.3, height: 1.0);
+  static TextStyle get numeral => _sora(36, 800, spacing: -1.2, height: 1.0);
+  static TextStyle get numeralSm => _sora(18, 700, spacing: -0.4, height: 1.0);
 
   /// Small-caps-style label: uppercase with wide tracking. Used sparingly for
   /// section and status labels.
-  static TextStyle get label => _inter(11, 600, spacing: 2.0, height: 1.0, color: DS.textTertiary);
-  static TextStyle get labelBright => _inter(11, 600, spacing: 2.0, height: 1.0, color: DS.textSecondary);
+  static TextStyle get label => _inter(11.5, 700, spacing: 1.2, height: 1.0, color: DS.textTertiary);
+  static TextStyle get labelBright => _inter(11.5, 700, spacing: 1.2, height: 1.0, color: DS.textSecondary);
 
   static TextStyle get body => _inter(14.5, 400, height: 1.45, color: DS.textSecondary);
-  static TextStyle get bodyStrong => _inter(14.5, 500, height: 1.4);
+  static TextStyle get bodyStrong => _inter(15, 700, height: 1.35);
   static TextStyle get caption => _inter(12.5, 400, height: 1.35, color: DS.textTertiary);
 
   /// Primary button text.
-  static TextStyle get button => _inter(16, 600, spacing: 0.6, color: DS.textOnGold);
+  static TextStyle get button => _inter(17.5, 800, spacing: 0.4, color: DS.textOnGold);
   static TextStyle get buttonGhost => _inter(14, 500, spacing: 0.3, color: DS.textSecondary);
 }

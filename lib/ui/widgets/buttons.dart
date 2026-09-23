@@ -100,41 +100,57 @@ class _PrimaryButtonState extends State<PrimaryButton>
           final double glow = (0.30 + breathe * 0.14) * (1 - p * 0.75);
           final double lift = (1 - p * 0.9);
 
+          // A face sitting on a darker body, and pressing sinks the face
+          // into it.
+          //
+          // The previous version argued that a bevel "dates a button by a
+          // decade", and for an app that is true. For a game it is the
+          // opposite: the sunk-face button is the single most recognisable
+          // control in the category, and a flat one reads as a link. The
+          // whole point is that it looks like a physical thing you can push.
+          final double sink = DS.bevel * p;
+
           return Transform.scale(
             scale: scale,
             child: Container(
               width: widget.expand ? double.infinity : null,
-              padding: const EdgeInsets.symmetric(horizontal: DS.s32, vertical: DS.s20),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(DS.rXl),
-                // A near-flat fill with a short sheen across the top third.
-                // A full-height light-to-dark ramp plus a tight coloured drop
-                // shadow is a bevel, and a bevel is the fastest way to date a
-                // button by a decade.
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[Color(0xFFF9D794), DS.gold, Color(0xFFE7B355)],
-                  stops: <double>[0.0, 0.38, 1.0],
-                ),
+                color: DS.goldDeep,
                 boxShadow: <BoxShadow>[
-                  // One wide, low-opacity cast of light. Negative spread keeps
-                  // it under the button instead of haloing around it.
                   BoxShadow(
-                    color: DS.goldDeep.withValues(alpha: glow * 0.55),
-                    blurRadius: 46 * lift,
-                    spreadRadius: -8,
-                    offset: Offset(0, 18 * lift),
+                    color: DS.goldDeep.withValues(alpha: glow * 0.45),
+                    blurRadius: 40 * lift,
+                    spreadRadius: -6,
+                    offset: Offset(0, 14 * lift),
                   ),
                   BoxShadow(
-                    color: DS.inkDeep.withValues(alpha: 0.45),
-                    blurRadius: 20,
-                    spreadRadius: -10,
-                    offset: Offset(0, 8 * lift),
+                    color: DS.skyDeep.withValues(alpha: 0.42),
+                    blurRadius: 18,
+                    spreadRadius: -8,
+                    offset: Offset(0, 10 * lift),
                   ),
                 ],
               ),
-              child: child,
+              // The body is DS.bevel taller than the face; the face slides
+              // down into it under the finger.
+              padding: EdgeInsets.only(top: sink, bottom: DS.bevel - sink),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.s32,
+                  vertical: DS.s16,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(DS.rXl),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[Color(0xFFFFE08A), DS.gold],
+                    stops: <double>[0.0, 1.0],
+                  ),
+                ),
+                child: child,
+              ),
             ),
           );
         },

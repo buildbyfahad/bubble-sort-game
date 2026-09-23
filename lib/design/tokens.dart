@@ -11,38 +11,64 @@ class DS {
 
   // ---------------------------------------------------------------- surfaces
   //
-  // The ground is a deep blue-black rather than pure black: pure black flattens
-  // shadows and makes everything read as cheap. Each step up is a small,
-  // slightly-desaturated lift so elevation is felt, not announced.
-  static const Color ink = Color(0xFF0A0C12);
-  static const Color inkDeep = Color(0xFF06070B);
-  static const Color surface = Color(0xFF11141C);
-  static const Color surfaceRaised = Color(0xFF171B25);
-  static const Color surfaceHigh = Color(0xFF1E2330);
+  // Rebuilt for a *game*, not an app.
+  //
+  // The original palette was near-black with a single gold accent, argued for
+  // on the grounds that the whole category is candy-on-white. It produced
+  // something genuinely sophisticated and, in play-testing, something that
+  // read as cold: a premium finance app that happened to contain a puzzle.
+  // A player who downloads a colour-sorting game to relax is not looking for
+  // restraint.
+  //
+  // So: a bright violet ground, and dark panels floating on it. Panels stay
+  // dark deliberately — twelve ball hues have to stay separable, and every
+  // one of them reads more cleanly against a dark vessel than a light one.
+  // The brightness goes into the world behind the board, where it costs the
+  // puzzle nothing.
+  static const Color skyTop = Color(0xFF8E6CFF);
+  static const Color skyMid = Color(0xFF6A47E8);
+  static const Color skyDeep = Color(0xFF4226B4);
 
-  /// Hairline used on card and vessel edges. Light at 6–10% reads as a
-  /// catch-light on an edge, not as a border.
-  static const Color hairline = Color(0x14FFFFFF);
-  static const Color hairlineStrong = Color(0x24FFFFFF);
+  /// The lit surface the vessels stand on. Without it they float in a void,
+  /// which is most of why the board did not read as a place.
+  static const Color table = Color(0xFF3B1F9E);
+  static const Color tableEdge = Color(0xFF2A1478);
+
+  /// `ink` is still the darkest ground — now used for panels and vessels
+  /// rather than for the whole screen.
+  static const Color ink = Color(0xFF231447);
+  static const Color inkDeep = Color(0xFF160B30);
+  static const Color surface = Color(0xFF2C1A5C);
+  static const Color surfaceRaised = Color(0xFF3A2472);
+  static const Color surfaceHigh = Color(0xFF4A3090);
+
+  /// Hairline used on card and vessel edges.
+  static const Color hairline = Color(0x1FFFFFFF);
+  static const Color hairlineStrong = Color(0x33FFFFFF);
 
   // ------------------------------------------------------------------- brand
   //
-  // Warm gold against cool ink. Almost every game in this genre reaches for
-  // candy brights on white; a warm accent on a cool dark ground is the whole
-  // signature.
-  static const Color gold = Color(0xFFF3C56B);
-  static const Color goldDeep = Color(0xFFD9A03F);
-  static const Color goldSoft = Color(0xFFFFE0A6);
+  // Candy accents, each with a deeper twin used as the bevel under a button.
+  // The bevel is what makes a control look pressable rather than painted on,
+  // and it is the single most recognisable piece of casual-game furniture.
+  static const Color gold = Color(0xFFFFC93C);
+  static const Color goldDeep = Color(0xFFD99413);
+  static const Color goldSoft = Color(0xFFFFE9A8);
 
-  /// Cool counterpoint — used for success, progress and completion glow.
-  static const Color aqua = Color(0xFF5FD6C4);
-  static const Color aquaDeep = Color(0xFF2AA697);
+  static const Color aqua = Color(0xFF3FD9C8);
+  static const Color aquaDeep = Color(0xFF17A092);
+
+  /// A third accent, for the things gold and aqua should not both carry.
+  static const Color punch = Color(0xFFFF5E9C);
+  static const Color punchDeep = Color(0xFFD1307A);
 
   // -------------------------------------------------------------------- text
-  static const Color textPrimary = Color(0xFFF2F4F8);
-  static const Color textSecondary = Color(0xFF9BA6BC);
-  static const Color textTertiary = Color(0xFF5F6979);
-  static const Color textOnGold = Color(0xFF231A08);
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFDCD2FF);
+  // Lifted from #9585D8: on a near-black ground a dim grey-violet reads as
+  // "quiet"; on a bright violet one it reads as "broken".
+  static const Color textTertiary = Color(0xFFB9ABF2);
+  static const Color textOnGold = Color(0xFF4A3000);
 
   // ------------------------------------------------------------ bubble palette
   //
@@ -97,26 +123,35 @@ class DS {
   static const double s72 = 72;
 
   // ------------------------------------------------------------------- radius
-  static const double rXs = 6;
-  static const double rSm = 10;
-  static const double rMd = 16;
-  static const double rLg = 22;
-  static const double rXl = 30;
+  // Rounder than before across the board. Chunky radii are the other half of
+  // reading as a game; a 16pt card corner is an app, a 24pt one is a toy.
+  static const double rXs = 8;
+  static const double rSm = 14;
+  static const double rMd = 22;
+  static const double rLg = 28;
+  static const double rXl = 36;
   static const double rPill = 999;
+
+  /// How deep a pressable control's bevel sits. Buttons are drawn as a face
+  /// over a darker body; pressing sinks the face into it.
+  static const double bevel = 5;
 
   // ------------------------------------------------------------------ shadows
   //
   // Shadows are tinted toward the background hue and kept wide + low opacity.
   // Two layers each: a tight contact shadow and a broad ambient one. Hard
   // black drop-shadows are the single fastest way to look like 2015.
+  // Tinted toward the violet ground rather than black. A black shadow on a
+  // coloured background is the fastest way to make a bright palette look
+  // muddy.
   static List<BoxShadow> get e1 => const <BoxShadow>[
-        BoxShadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2)),
-        BoxShadow(color: Color(0x24000814), blurRadius: 24, offset: Offset(0, 10)),
+        BoxShadow(color: Color(0x381A0A45), blurRadius: 10, offset: Offset(0, 4)),
+        BoxShadow(color: Color(0x22140538), blurRadius: 28, offset: Offset(0, 12)),
       ];
 
   static List<BoxShadow> get e2 => const <BoxShadow>[
-        BoxShadow(color: Color(0x4D000000), blurRadius: 14, offset: Offset(0, 4)),
-        BoxShadow(color: Color(0x33000814), blurRadius: 40, offset: Offset(0, 18)),
+        BoxShadow(color: Color(0x4A1A0A45), blurRadius: 18, offset: Offset(0, 8)),
+        BoxShadow(color: Color(0x33140538), blurRadius: 44, offset: Offset(0, 20)),
       ];
 
   static List<BoxShadow> glow(Color c, {double opacity = 0.34, double blur = 34, double y = 10}) =>

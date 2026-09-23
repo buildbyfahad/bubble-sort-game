@@ -50,7 +50,9 @@ class Wordmark extends StatelessWidget {
           shaderCallback: (Rect r) => const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xFFFFFFFF), Color(0xFFB9C2D4)],
+            // Solid white into a faint warm tint, rather than white into
+            // grey — grey on violet reads as a rendering fault.
+            colors: <Color>[Color(0xFFFFFFFF), Color(0xFFEDE4FF)],
           ).createShader(r),
           blendMode: BlendMode.srcIn,
           child: Column(

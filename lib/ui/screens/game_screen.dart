@@ -344,9 +344,32 @@ class _GameScreenState extends State<GameScreen> {
                 ),
 
                 // --- board -------------------------------------------------
+                //
+                // Sat on a lit platform rather than floating in the sky. The
+                // vessels had nothing to stand on, which is most of why the
+                // board did not read as a *place* — and a play field that is
+                // not a place is the difference between a game and a diagram.
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DS.s24, DS.s8, DS.s24, DS.s8),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(DS.s12, DS.s8, DS.s12, DS.s8),
+                    padding: const EdgeInsets.fromLTRB(DS.s12, DS.s16, DS.s12, DS.s16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(DS.rXl),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[DS.table, DS.tableEdge],
+                      ),
+                      border: Border.all(color: DS.hairline),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: DS.skyDeep.withValues(alpha: 0.5),
+                          blurRadius: 30,
+                          spreadRadius: -6,
+                          offset: const Offset(0, 14),
+                        ),
+                      ],
+                    ),
                     child: BoardView(
                       controller: _controller,
                       colorAssist: _scope.settings.colorAssist,
