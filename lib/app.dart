@@ -121,7 +121,9 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
   Widget build(BuildContext context) {
     return WidgetsApp(
       title: 'Bubble Sort',
-      color: DS.ink,
+      // The window colour Android shows in the task switcher and behind the
+      // app before the first frame. Must track the sky, not the old ground.
+      color: DS.skyMid,
       debugShowCheckedModeBanner: false,
       // The base every uncoloured style inherits from. Cards override it.
       textStyle: Type.body.copyWith(color: DS.textPrimary),

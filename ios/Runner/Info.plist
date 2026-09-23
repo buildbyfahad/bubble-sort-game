@@ -6,19 +6,19 @@
 	     your own before release, along with the rewarded unit ids in
 	     lib/services/ads_service.dart. The SDK reads this at launch and the app
 	     will not start without it. -->
-	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
-	<!-- Rewarded video needs the network, and on iOS the SDK also expects the
+		<key>GADApplicationIdentifier</key>
+		<string>ca-app-pub-3940256099942544~1458002511</string>
+		<!-- Rewarded video needs the network, and on iOS the SDK also expects the
 	     SKAdNetwork identifiers for attribution. Google's own is the minimum;
 	     add your mediation partners' ids here if you ever add mediation. -->
-	<key>SKAdNetworkItems</key>
-	<array>
-		<dict>
-			<key>SKAdNetworkIdentifier</key>
-			<string>cstr6suwn9.skadnetwork</string>
-		</dict>
-	</array>
-	<key>CFBundleDevelopmentRegion</key>
+		<key>SKAdNetworkItems</key>
+		<array>
+			<dict>
+				<key>SKAdNetworkIdentifier</key>
+				<string>cstr6suwn9.skadnetwork</string>
+			</dict>
+		</array>
+		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
 		<string>Bubble Sort</string>

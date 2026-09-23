@@ -65,7 +65,7 @@ flutter_launcher_icons:
   # Adaptive icons are masked to an arbitrary shape and parallaxed, so the
   # foreground is drawn well inside the safe zone and the ground colour is
   # supplied separately rather than baked in.
-  adaptive_icon_background: "#0A0C12"
+  adaptive_icon_background: "#5A3BD4"
   adaptive_icon_foreground: assets/branding/icon_foreground.png
   adaptive_icon_monochrome: assets/branding/icon_foreground.png
 
@@ -73,17 +73,19 @@ flutter_launcher_icons:
 #
 # The point of this is continuity: the platform splash paints the same mark on
 # the same ground as the app's own boot screen, so the hand-off from system to
-# Flutter is invisible. Without it the launcher shows a white flash first, which
+# Flutter is invisible. The colour below therefore has to track DS.skyMid — it
+# was left on the old near-black when the palette went bright, which made the
+# app open on a black flash and then jump to violet. Without it the launcher shows a white flash first, which
 # is the single most common way a polished game gives itself away at launch.
 #   dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#0A0C12"
+  color: "#5A3BD4"
   image: assets/branding/splash.png
   android: true
   ios: true
   web: false
   android_12:
     # Android 12+ ignores the legacy drawable and masks its icon to a circle.
-    color: "#0A0C12"
+    color: "#5A3BD4"
     image: assets/branding/splash_android12.png
-    icon_background_color: "#0A0C12"
+    icon_background_color: "#5A3BD4"
