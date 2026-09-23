@@ -3,7 +3,7 @@ import 'package:bubble_sort/engine/board_state.dart';
 import 'package:bubble_sort/engine/game_controller.dart';
 import 'package:bubble_sort/engine/solver.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
-import 'package:bubble_sort/ui/screens/home_screen.dart';
+
 import 'package:bubble_sort/ui/screens/level_complete.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
 import 'package:bubble_sort/ui/widgets/tube.dart';
@@ -59,7 +59,7 @@ void main() {
   renderTest('01 — home', (WidgetTester tester) async {
     useHandset(tester);
     await tester.pumpWidget(harness(await buildScope(
-      child: const HomeScreen(),
+      child: const LevelsScreen(),
       prefs: _progressed(),
     )));
     await settle(tester, steps: 30);

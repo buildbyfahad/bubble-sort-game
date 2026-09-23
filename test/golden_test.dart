@@ -5,7 +5,7 @@ import 'package:bubble_sort/services/haptic_service.dart';
 import 'package:bubble_sort/services/settings_service.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
 import 'package:bubble_sort/ui/screens/level_complete.dart';
-import 'package:bubble_sort/ui/screens/home_screen.dart';
+
 import 'package:bubble_sort/ui/screens/collection_screen.dart';
 import 'package:bubble_sort/ui/screens/daily_sheet.dart';
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
@@ -49,7 +49,7 @@ void main() {
 
   renderTest('home — fresh install', (WidgetTester tester) async {
     useHandset(tester);
-    await tester.pumpWidget(harness(await buildScope(child: const HomeScreen())));
+    await tester.pumpWidget(harness(await buildScope(child: const LevelsScreen())));
     await settle(tester);
     await expectLater(find.byType(Navigator), matchesGoldenFile('goldens/home_fresh.png'));
   });
@@ -57,7 +57,7 @@ void main() {
   renderTest('home — mid progress', (WidgetTester tester) async {
     useHandset(tester);
     await tester.pumpWidget(harness(await buildScope(
-      child: const HomeScreen(),
+      child: const LevelsScreen(),
       prefs: <String, Object>{
         'progress.best.1': 3,
         'progress.best.2': 6,

@@ -2,8 +2,9 @@ import 'package:bubble_sort/app.dart';
 import 'package:bubble_sort/data/level_catalog.dart';
 import 'package:bubble_sort/ui/screens/game_screen.dart';
 import 'package:bubble_sort/services/wallet_service.dart';
+import 'package:bubble_sort/ui/screens/collection_screen.dart';
 import 'package:bubble_sort/ui/screens/daily_sheet.dart';
-import 'package:bubble_sort/ui/screens/home_screen.dart';
+
 import 'package:bubble_sort/ui/screens/levels_screen.dart';
 import 'package:bubble_sort/ui/screens/settings_sheet.dart';
 import 'package:bubble_sort/ui/widgets/board_view.dart';
@@ -42,25 +43,29 @@ void main() {
     await settle(tester, steps: 16);
   }
 
-  testWidgets('the daily reward is offered on launch, and pays out',
+  testWidgets('the daily is reachable from the road, and pays out',
       (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester, dailyReady: true);
 
-    // Offered without being asked for — this is the game's day-2 hook, and it
-    // has to arrive on its own.
+    // Deliberately NOT a launch popup. The road is the home screen, and the
+    // point of making it so was that nothing stands between opening the app
+    // and playing it — a sheet over the map on launch is the lobby again in
+    // a different costume. A badged chip says there is something here without
+    // taking the screen.
+    expect(find.byType(DailyRewardSheet), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('Today'));
+    await settle(tester, steps: 20);
     expect(find.byType(DailyRewardSheet), findsOneWidget);
     expect(find.text('CLAIM'), findsOneWidget);
 
     await tester.tap(find.text('CLAIM'));
     await settle(tester, steps: 20);
 
-    // Day one of the ladder.
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     expect(prefs.getInt('wallet.coins'), WalletService.rewardFor(1).coins);
     expect(prefs.getInt('wallet.streak'), 1);
-
-    // And it cannot be taken twice.
     expect(find.text('CLAIM'), findsNothing);
     await drainTimers(tester);
   });
@@ -70,6 +75,10 @@ void main() {
     useHandset(tester);
     await boot(tester);
 
+    // The challenge lives in the Today sheet now, beside the reward they
+    // share a reset with.
+    await tester.tap(find.bySemanticsLabel('Today'));
+    await settle(tester, steps: 20);
     await tester.tap(find.text("Today's challenge"));
     await settle(tester, steps: 20);
     expect(find.byType(GameScreen), findsOneWidget);
@@ -84,7 +93,8 @@ void main() {
   testWidgets('the app boots into the menu', (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester);
-    expect(find.byType(HomeScreen), findsOneWidget);
+    // The road IS the home screen now — no lobby in front of it.
+    expect(find.byType(LevelsScreen), findsOneWidget);
     await drainTimers(tester);
   });
 
@@ -92,7 +102,9 @@ void main() {
     useHandset(tester);
     await boot(tester);
 
-    await tester.tap(find.text('PLAY'));
+    // One tap from launch to play: the road is the home screen, and the lit
+    // node is the only thing on it asking to be pressed.
+    await tester.tap(find.text('1'));
     await settle(tester, steps: 20);
 
     expect(tester.takeException(), isNull);
@@ -101,31 +113,27 @@ void main() {
     await drainTimers(tester);
   });
 
-  testWidgets('the levels screen and settings sheet open from the menu',
+  testWidgets('settings and the collection open from the road',
       (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester);
 
-    // The progress card is the way to the map now; the separate labelled
-    // button was a second route to the same place.
-    await tester.tap(find.text('VIEW THE ROAD'));
-    await settle(tester, steps: 20);
-    expect(tester.takeException(), isNull);
+    // No lobby to go through — every other screen is a chip on the road.
     expect(find.byType(LevelsScreen), findsOneWidget);
 
-    // Back out, then open settings.
-    final NavigatorState nav = tester.state<NavigatorState>(find.byType(Navigator).first);
-    nav.pop();
-    await settle(tester, steps: 16);
-
-    await tester.tap(find.byType(HomeScreen).first, warnIfMissed: false);
-    // Settings is the *last* ghost button on the utility row now that the
-    // collection sits beside it. Found by its label rather than position, so
-    // the row can gain another control without this test caring.
     await tester.tap(find.bySemanticsLabel('Settings'));
     await settle(tester, steps: 20);
     expect(tester.takeException(), isNull);
     expect(find.byType(SettingsSheet), findsOneWidget);
+
+    final NavigatorState nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    nav.pop();
+    await settle(tester, steps: 16);
+
+    await tester.tap(find.bySemanticsLabel('Collection'));
+    await settle(tester, steps: 20);
+    expect(tester.takeException(), isNull);
+    expect(find.byType(CollectionScreen), findsOneWidget);
     await drainTimers(tester);
   });
 
@@ -133,7 +141,7 @@ void main() {
       (WidgetTester tester) async {
     useHandset(tester);
     await boot(tester);
-    await tester.tap(find.text('PLAY'));
+    await tester.tap(find.text('1'));
     await settle(tester, steps: 20);
 
     // Level 1 is [amber-topped, vermilion-topped, empty, empty]; pouring the

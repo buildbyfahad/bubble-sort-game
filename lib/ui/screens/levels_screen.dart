@@ -14,9 +14,25 @@ import '../transitions.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/buttons.dart';
 import '../widgets/icons.dart';
+import 'collection_screen.dart';
+import 'daily_sheet.dart';
 import 'game_screen.dart';
+import 'settings_sheet.dart';
+import 'shop_sheet.dart';
 import 'level_complete.dart' show ClearGrade, gradeFor;
 
+/// The road — and the game's home screen.
+///
+/// There used to be a menu in front of this: launch, a daily popup, a lobby
+/// with six entry points, *then* a decision to open the map, *then* a
+/// decision about which level. Six things between opening the app and
+/// playing it, on the most-repeated path in the product.
+///
+/// The map is the home screen now. Launch lands the player on the road at
+/// their own level with one lit node, and everything else — shop, collection,
+/// settings, the daily — hangs off it as chips. Win a level and you come back
+/// here to watch the next node open.
+///
 /// The journey.
 ///
 /// This used to be a grid of numbered tiles, which is a *menu*: it tells the
@@ -181,7 +197,11 @@ class _MapPlan {
 // --------------------------------------------------------------- the screen
 
 class LevelsScreen extends StatefulWidget {
-  const LevelsScreen({super.key});
+  const LevelsScreen({super.key, this.isHome = true});
+
+  /// The road is the app's root. When it is pushed on top of something else
+  /// it grows a back button instead of the home chrome.
+  final bool isHome;
 
   @override
   State<LevelsScreen> createState() => _LevelsScreenState();
@@ -244,12 +264,33 @@ class _LevelsScreenState extends State<LevelsScreen> with SingleTickerProviderSt
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _MapHeader(
+                _RoadBar(
+                  isHome: widget.isHome,
+                  coins: scope.wallet.coins,
+                  hints: scope.wallet.hints,
                   cleared: scope.progress.clearedCount,
                   total: scope.catalog.length,
-                  chapter: scope.catalog.chapterOf(frontier),
+                  todayReady: scope.wallet.canClaimDaily ||
+                      !scope.progress.isDailyCleared(scope.wallet.today),
                   onBack: () {
+                    Fx.tap(context);
                     Navigator.of(context).pop();
+                  },
+                  onToday: () {
+                    Fx.navigate(context);
+                    Navigator.of(context).push(sheetRoute<void>(const DailyRewardSheet()));
+                  },
+                  onCollection: () {
+                    Fx.navigate(context);
+                    Navigator.of(context).push(riseRoute<void>(const CollectionScreen()));
+                  },
+                  onShop: () {
+                    Fx.navigate(context);
+                    Navigator.of(context).push(sheetRoute<void>(const ShopSheet()));
+                  },
+                  onSettings: () {
+                    Fx.navigate(context);
+                    Navigator.of(context).push(sheetRoute<void>(const SettingsSheet()));
                   },
                 ),
                 Expanded(
@@ -339,37 +380,172 @@ class _LevelsScreenState extends State<LevelsScreen> with SingleTickerProviderSt
 
 // ------------------------------------------------------------------ header
 
-class _MapHeader extends StatelessWidget {
-  const _MapHeader({
+/// The road's own chrome: what the player has, and every other screen.
+///
+/// Deliberately chips rather than a menu. The road is the home screen, so
+/// these are the *only* things competing with the one lit node, and each is
+/// the smallest thing that can still be tapped.
+class _RoadBar extends StatelessWidget {
+  const _RoadBar({
+    required this.isHome,
+    required this.coins,
+    required this.hints,
     required this.cleared,
     required this.total,
-    required this.chapter,
+    required this.todayReady,
     required this.onBack,
+    required this.onToday,
+    required this.onCollection,
+    required this.onShop,
+    required this.onSettings,
   });
 
+  final bool isHome;
+  final int coins;
+  final int hints;
   final int cleared;
   final int total;
-  final Chapter chapter;
+  final bool todayReady;
   final VoidCallback onBack;
+  final VoidCallback onToday;
+  final VoidCallback onCollection;
+  final VoidCallback onShop;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(DS.s16, DS.s8, DS.s16, DS.s12),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(DS.s12, DS.s8, DS.s12, DS.s8),
+        child: Column(
           children: <Widget>[
-            GhostIconButton(icon: DIcons.back, semanticLabel: 'Back', onTap: onBack),
-            Expanded(
-              child: Column(
-                children: <Widget>[
-                  Text('THE ROAD', style: Type.labelBright),
-                  const SizedBox(height: DS.s4),
-                  Text('$cleared of $total cleared',
-                      style: Type.caption.copyWith(color: DS.textSecondary)),
+            Row(
+              children: <Widget>[
+                if (!isHome) ...<Widget>[
+                  GhostIconButton(icon: DIcons.back, semanticLabel: 'Back', onTap: onBack),
+                  const SizedBox(width: DS.s8),
                 ],
-              ),
+                _Purse(coins: coins, hints: hints, onTap: onShop),
+                const Spacer(),
+                _Chip(
+                  icon: DIcons.flame,
+                  badge: todayReady,
+                  semanticLabel: 'Today',
+                  onTap: onToday,
+                ),
+                const SizedBox(width: DS.s8),
+                _Chip(
+                  icon: DIcons.grid,
+                  semanticLabel: 'Collection',
+                  onTap: onCollection,
+                ),
+                const SizedBox(width: DS.s8),
+                _Chip(
+                  icon: DIcons.settings,
+                  semanticLabel: 'Settings',
+                  onTap: onSettings,
+                ),
+              ],
             ),
-            const SizedBox(width: 44),
+            const SizedBox(height: DS.s8),
+            Text('$cleared of $total cleared',
+                style: Type.caption.copyWith(color: DS.textSecondary)),
           ],
+        ),
+      );
+}
+
+/// What the player has, as one tappable control that opens the shop.
+class _Purse extends StatelessWidget {
+  const _Purse({required this.coins, required this.hints, required this.onTap});
+
+  final int coins;
+  final int hints;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          Fx.tap(context);
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(DS.rPill),
+            color: DS.ink.withValues(alpha: 0.42),
+            border: Border.all(color: DS.outline, width: DS.stroke),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const DIcon(DIcons.coin, size: 15, color: DS.gold),
+              const SizedBox(width: DS.s4),
+              Text('$coins', style: Type.numeralSm.copyWith(fontSize: 15, color: DS.gold)),
+              const SizedBox(width: DS.s12),
+              const DIcon(DIcons.hint, size: 15, color: DS.aqua),
+              const SizedBox(width: DS.s4),
+              Text('$hints', style: Type.numeralSm.copyWith(fontSize: 15, color: DS.aqua)),
+            ],
+          ),
+        ),
+      );
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.icon,
+    required this.semanticLabel,
+    required this.onTap,
+    this.badge = false,
+  });
+
+  final DIcons icon;
+  final String semanticLabel;
+  final VoidCallback onTap;
+
+  /// A dot, not a count. The player needs to know there is something here,
+  /// not how many things.
+  final bool badge;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: semanticLabel,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            Fx.tap(context);
+            onTap();
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: DS.ink.withValues(alpha: 0.42),
+                  border: Border.all(color: DS.outline, width: DS.stroke),
+                ),
+                child: Center(child: DIcon(icon, size: 20, color: DS.textPrimary)),
+              ),
+              if (badge)
+                Positioned(
+                  right: -1,
+                  top: -1,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: DS.punch,
+                      border: Border.all(color: DS.outline, width: 2),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       );
 }
@@ -662,14 +838,15 @@ class _TrackPainter extends CustomPainter {
     }
     if (!any) return;
 
+    // The road's own outline, drawn widest and first.
     canvas.drawPath(
       path,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _grooveWidth
+        ..strokeWidth = _grooveWidth + DS.stroke * 2
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..color = DS.inkDeep.withValues(alpha: 0.55),
+        ..color = DS.outline,
     );
     canvas.drawPath(
       path,
@@ -889,6 +1066,14 @@ class _NodePainter extends CustomPainter {
       Paint()
         ..color = DS.inkDeep.withValues(alpha: 0.55)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.22),
+    );
+
+    // The stroke first, as a slightly larger disc behind the face — every
+    // element in the game is a fill plus an outline.
+    canvas.drawCircle(
+      c,
+      r * 0.88 + DS.stroke,
+      Paint()..color = DS.outline,
     );
 
     // Body: lit from above, like everything else in the game.

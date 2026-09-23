@@ -14,7 +14,7 @@ import 'services/progress_service.dart';
 import 'services/settings_service.dart';
 import 'services/wallet_service.dart';
 import 'ui/app_scope.dart';
-import 'ui/screens/home_screen.dart';
+import 'ui/screens/levels_screen.dart';
 import 'ui/widgets/ambient_background.dart';
 import 'ui/widgets/brand_mark.dart';
 import 'ui/widgets/logo.dart';
@@ -175,7 +175,7 @@ class _BubbleSortAppState extends State<BubbleSortApp> {
         switchOutCurve: Ease.inFast,
         child: _booting || _settings == null
             ? const _BootScreen(key: ValueKey<String>('boot'))
-            : const HomeScreen(key: ValueKey<String>('home')),
+            : const LevelsScreen(key: ValueKey<String>('home')),
       ),
     );
   }

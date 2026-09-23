@@ -205,6 +205,8 @@ class _GameScreenState extends State<GameScreen> {
             });
           },
           onHome: () {
+            // Back to the road — which is the home screen now, so this is a
+            // single pop past the sheet rather than an unwind to a lobby.
             _scope.audio.whoosh();
             Navigator.of(context)
               ..pop()
@@ -250,6 +252,8 @@ class _GameScreenState extends State<GameScreen> {
             });
           },
           onHome: () {
+            // Back to the road — which is the home screen now, so this is a
+            // single pop past the sheet rather than an unwind to a lobby.
             _scope.audio.whoosh();
             Navigator.of(context)
               ..pop()

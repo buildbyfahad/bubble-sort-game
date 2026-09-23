@@ -47,6 +47,7 @@ class SoftCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius + 2),
         color: DS.cardUnder,
+        border: Border.all(color: DS.outline, width: DS.stroke),
         boxShadow: elevated ? DS.e2 : null,
       ),
       padding: const EdgeInsets.only(bottom: DS.bevel),

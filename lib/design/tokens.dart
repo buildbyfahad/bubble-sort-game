@@ -158,6 +158,15 @@ class DS {
   /// over a darker body; pressing sinks the face into it.
   static const double bevel = 5;
 
+  /// The dark stroke around every element.
+  ///
+  /// This is the construction the whole category is built on and the thing
+  /// this UI was missing: a sticker is a fill plus an outline, and without
+  /// the outline it is just a coloured rectangle. Thick enough to read as a
+  /// drawn edge rather than a border.
+  static const double stroke = 2.5;
+  static const Color outline = Color(0xFF1B0E3D);
+
   // ------------------------------------------------------------------ shadows
   //
   // Shadows are tinted toward the background hue and kept wide + low opacity.

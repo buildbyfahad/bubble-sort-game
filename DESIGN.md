@@ -204,7 +204,26 @@ landing. Linear is never used.
 
 ---
 
-## 3. Home screen
+## 3. Flow
+
+**The road is the home screen.** There is no menu.
+
+There used to be one: launch, a daily popup, a lobby with six entry points,
+*then* a decision to open the map, *then* a decision about which level. Six
+things between opening the app and playing it, on the most-repeated path in
+the product.
+
+Now launch lands the player on the road at their own level, with one lit node.
+Tap it and play. Win and come back here to watch the next node open.
+Everything else — shop, collection, settings, today's reward and challenge —
+is a chip in the top bar, sized as the smallest thing that can still be
+tapped, because they are the only things competing with that one node.
+
+The daily deliberately does **not** pop on launch. A sheet over the map before
+the player can do anything is the lobby again in a different costume; a badged
+chip says there is something waiting without taking the screen.
+
+## 3b. The old home screen
 
 ```
       ┌ ◉ 240 │ ✦ 5 ───────────────── ⚙ ┐   balances (tap → shop), settings

@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../data/daily_challenge.dart';
+import '../../data/level.dart';
 import '../../services/wallet_service.dart';
 import '../app_scope.dart';
 import '../feedback.dart';
@@ -11,6 +13,8 @@ import '../widgets/buttons.dart';
 import '../widgets/coin_flight.dart';
 import '../widgets/icons.dart';
 import '../widgets/surfaces.dart';
+import '../transitions.dart';
+import 'game_screen.dart';
 
 /// The daily reward.
 ///
@@ -197,7 +201,28 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
                       ],
                     ),
 
-                    const SizedBox(height: DS.s20),
+                    const SizedBox(height: DS.s16),
+
+                    // --- today's challenge ----------------------------------
+                    //
+                    // Lives here rather than on its own card. Both reset on
+                    // the same calendar day, so they are one idea — and the
+                    // road is the home screen now, which has room for chips,
+                    // not for a second stack of panels.
+                    _ChallengeRow(
+                      level: DailyChallenge.levelForNormal(w.today, scope.catalog),
+                      done: scope.progress.isDailyCleared(w.today),
+                      onPlay: () {
+                        final Level l =
+                            DailyChallenge.levelForNormal(w.today, scope.catalog);
+                        Fx.navigate(context);
+                        Navigator.of(context)
+                          ..pop()
+                          ..push(riseRoute<void>(
+                              GameScreen(levelId: l.id, daily: true)));
+                      },
+                    ),
+                    const SizedBox(height: DS.s16),
 
                     if (_claimed != null)
                       _ClaimedBanner(reward: _claimed!, animation: _c)
@@ -412,4 +437,50 @@ class _Pill extends StatelessWidget {
           ],
         ),
       );
+}
+
+
+/// Today's challenge, as one row under the reward ladder.
+class _ChallengeRow extends StatelessWidget {
+  const _ChallengeRow({required this.level, required this.done, required this.onPlay});
+
+  final Level level;
+  final bool done;
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = done ? DS.inkSoft : DS.goldDeep;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: done ? () => Fx.refuse(context) : onPlay,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: DS.s16, vertical: DS.s12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(DS.rMd),
+          color: done ? DS.cardSoft : DS.gold.withValues(alpha: 0.16),
+          border: Border.all(color: accent.withValues(alpha: 0.45), width: 2),
+        ),
+        child: Row(
+          children: <Widget>[
+            DIcon(done ? DIcons.check : DIcons.play, size: 15, color: accent),
+            const SizedBox(width: DS.s12),
+            Expanded(
+              child: Text(
+                done ? "Today's challenge cleared" : "Today's challenge",
+                style: Type.bodyStrong.copyWith(
+                  fontSize: 14,
+                  color: done ? DS.inkSoft : DS.inkStrong,
+                ),
+              ),
+            ),
+            Text(
+              done ? 'Back tomorrow' : '${level.colorCount} colours · +${DailyChallenge.reward}',
+              style: Type.captionInk.copyWith(fontSize: 12, color: accent),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

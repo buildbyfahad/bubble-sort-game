@@ -121,6 +121,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(DS.rXl),
                 color: DS.goldDeep,
+                border: Border.all(color: DS.outline, width: DS.stroke),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
                     color: DS.goldDeep.withValues(alpha: glow * 0.45),
@@ -228,7 +229,7 @@ class _GhostIconButtonState extends State<GhostIconButton>
                     const Color(0xFFFFFFFF).withValues(alpha: 0.10),
                     p,
                   ),
-                  border: Border.all(color: DS.hairline, width: 1),
+                  border: Border.all(color: DS.outline, width: DS.stroke),
                 ),
                 child: Center(
                   child: DIcon(
