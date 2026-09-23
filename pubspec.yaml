@@ -43,6 +43,13 @@ flutter:
     - assets/levels/
 
   fonts:
+    # The display face. Rounded terminals and a heavy weight range are what
+    # separate a game's type from an app's — Sora is a clean geometric
+    # grotesque, which reads as corporate however bold it is set.
+    # SIL Open Font License; the licence ships beside it.
+    - family: Baloo2
+      fonts:
+        - asset: assets/fonts/Baloo2.ttf
     - family: Sora
       fonts:
         - asset: assets/fonts/Sora.ttf

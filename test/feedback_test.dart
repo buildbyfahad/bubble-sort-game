@@ -53,7 +53,7 @@ void main() {
     final String src = read('lib/ui/feedback.dart');
     final RegExp method = RegExp(r'static void (\w+)\([^)]*\)\s*\{(.*?)\n  \}', dotAll: true);
     final Iterable<RegExpMatch> ms = method.allMatches(src);
-    expect(ms.length, greaterThanOrEqualTo(7), reason: 'expected the full vocabulary');
+    expect(ms.length, greaterThanOrEqualTo(8), reason: 'expected the full vocabulary');
     for (final RegExpMatch m in ms) {
       final String body = m.group(2)!;
       expect(body.contains('audio.'), isTrue, reason: 'Fx.${m.group(1)} has no sound');

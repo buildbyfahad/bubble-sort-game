@@ -83,6 +83,11 @@ class DS {
   static const Color cardSoft = Color(0xFFF3EFFF);
   static const Color cardEdge = Color(0xFFE2D9FF);
 
+  /// The body a card's face sits on, showing as a thick bottom edge. Same
+  /// idea as a button's bevel: it is what makes a surface read as an object
+  /// rather than a rectangle of colour.
+  static const Color cardUnder = Color(0xFFC3B2F0);
+
   static const Color inkStrong = Color(0xFF241557);
   static const Color inkBody = Color(0xFF4B3A8C);
   static const Color inkSoft = Color(0xFF8577C4);

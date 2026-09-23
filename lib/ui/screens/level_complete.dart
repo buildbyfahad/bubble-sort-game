@@ -10,6 +10,7 @@ import '../../engine/game_controller.dart';
 import '../../design/typography.dart';
 import '../app_scope.dart';
 import '../widgets/buttons.dart';
+import '../widgets/coin_flight.dart';
 import '../widgets/icons.dart';
 import '../widgets/surfaces.dart';
 
@@ -122,6 +123,11 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
   int _fired = 0;
   bool _cuesWired = false;
 
+  final CoinFlightController _coins = CoinFlightController();
+  final GlobalKey _crestKey = GlobalKey();
+  final GlobalKey _purseKey = GlobalKey();
+  bool _flown = false;
+
   @override
   void initState() {
     super.initState();
@@ -143,6 +149,7 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
       for (int i = 0; i < 5; i++) (0.26 + i * 0.035, scope.audio.tick),
       // The coin payout, and the hint a first clear grants.
       if (widget.coinsAwarded > 0) (0.46, scope.audio.star),
+      if (widget.coinsAwarded > 0) (0.50, _flyCoins),
       if (widget.hintsAwarded > 0) (0.52, scope.audio.star),
       // Finishing the last level of a chapter is the game's only milestone
       // above a single board, and until now it sounded exactly like the
@@ -161,10 +168,31 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
 
   @override
   void dispose() {
+    _coins.dispose();
     _c
       ..removeListener(_playCues)
       ..dispose();
     super.dispose();
+  }
+
+  /// Throws the payout off the crest and into the coin pill on the card.
+  ///
+  /// Fired from the cue schedule rather than on a timer, so the coins leave
+  /// on the same beat as the reward pill arrives.
+  void _flyCoins() {
+    if (_flown || widget.coinsAwarded <= 0) return;
+    _flown = true;
+    final RenderBox? root = context.findRenderObject() as RenderBox?;
+    final RenderBox? crest = _crestKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? purse = _purseKey.currentContext?.findRenderObject() as RenderBox?;
+    if (root == null || crest == null || purse == null) return;
+    sendCoins(
+      context,
+      _coins,
+      from: root.globalToLocal(crest.localToGlobal(crest.size.center(Offset.zero))),
+      to: root.globalToLocal(purse.localToGlobal(purse.size.center(Offset.zero))),
+      amount: widget.coinsAwarded,
+    );
   }
 
   @override
@@ -178,13 +206,16 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
     // as a form that had appeared over the board. The crest now occupies that
     // space and the result is a composition: mark, verdict, then the numbers.
     return SafeArea(
-      child: Padding(
+      child: Stack(
+        children: <Widget>[
+          Padding(
         padding: const EdgeInsets.fromLTRB(DS.s16, DS.s16, DS.s16, DS.s16),
         child: Column(
           children: <Widget>[
             Expanded(
               child: Center(
                 child: AnimatedBuilder(
+                  key: _crestKey,
                   animation: _c,
                   builder: (BuildContext context, _) => _Crest(
                     grade: grade,
@@ -211,9 +242,13 @@ class _LevelCompleteSheetState extends State<LevelCompleteSheet>
               onNext: widget.onNext,
               onReplay: widget.onReplay,
               onHome: widget.onHome,
+              purseKey: _purseKey,
             ),
           ],
         ),
+          ),
+          Positioned.fill(child: CoinFlight(controller: _coins)),
+        ],
       ),
     );
   }
@@ -478,7 +513,11 @@ class _ResultCard extends StatelessWidget {
     required this.onNext,
     required this.onReplay,
     required this.onHome,
+    required this.purseKey,
   });
+
+  /// Where the coin flight lands.
+  final GlobalKey purseKey;
 
   final ClearGrade grade;
   final Animation<double> animation;
@@ -551,6 +590,7 @@ class _ResultCard extends StatelessWidget {
               children: <Widget>[
                 if (coinsAwarded > 0)
                   _Reward(
+                    key: purseKey,
                     icon: DIcons.coin,
                     label: '+$coinsAwarded',
                     accent: DS.gold,
@@ -701,6 +741,7 @@ class _StatDivider extends StatelessWidget {
 /// as another statistic.
 class _Reward extends StatelessWidget {
   const _Reward({
+    super.key,
     required this.icon,
     required this.label,
     required this.accent,

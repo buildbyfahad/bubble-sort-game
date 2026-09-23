@@ -36,24 +36,37 @@ class SoftCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A sticker, not a pane.
+    //
+    // Casual-game surfaces read as physical objects: a solid face, a darker
+    // body under it, and an outline holding the whole thing together. A soft
+    // 1px hairline is an app's card — correct on a dark ground where the edge
+    // is a catch-light, and on a bright one it just makes the panel float
+    // with nothing holding it down.
     return Container(
-      padding: padding,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            DS.card,
-            Color.lerp(DS.cardSoft, tint ?? DS.cardSoft, tint == null ? 0 : 0.16)!,
-          ],
-        ),
-        border: Border.all(color: DS.cardEdge, width: 1),
+        borderRadius: BorderRadius.circular(radius + 2),
+        color: DS.cardUnder,
         boxShadow: elevated ? DS.e2 : null,
       ),
-      child: DefaultTextStyle.merge(
-        style: Type.body.copyWith(color: DS.inkStrong),
-        child: child,
+      padding: const EdgeInsets.only(bottom: DS.bevel),
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[
+              DS.card,
+              Color.lerp(DS.cardSoft, tint ?? DS.cardSoft, tint == null ? 0 : 0.16)!,
+            ],
+          ),
+        ),
+        child: DefaultTextStyle.merge(
+          style: Type.body.copyWith(color: DS.inkStrong),
+          child: child,
+        ),
       ),
     );
   }

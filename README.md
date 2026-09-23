@@ -98,7 +98,7 @@ tools/
   gen_audio.py               procedural sound design
 
 assets/
-  fonts/                     Sora + Inter (variable)
+  fonts/                     Baloo 2 (variable) + its OFL licence
   audio/                     21 synthesised cues + four 20s music stems
   levels/levels.json         1000 generated levels (~103 KB)
 ```

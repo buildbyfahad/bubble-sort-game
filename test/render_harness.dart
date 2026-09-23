@@ -42,9 +42,11 @@ void renderTest(String description, Future<void> Function(WidgetTester) body) {
 /// and the whole exercise — checking that the type, spacing and hierarchy
 /// actually work — is worthless.
 Future<void> loadAppFonts() async {
+  // Both roles are the same rounded face now; the loader still takes a pair
+  // so a future split back into display + UI needs no change here.
   for (final (String family, String path) in <(String, String)>[
-    (Type.display, 'assets/fonts/Sora.ttf'),
-    (Type.ui, 'assets/fonts/Inter.ttf'),
+    (Type.display, 'assets/fonts/Baloo2.ttf'),
+    (Type.ui, 'assets/fonts/Baloo2.ttf'),
   ]) {
     final FontLoader loader = FontLoader(family)
       ..addFont(File(path).readAsBytes().then((Uint8List b) => b.buffer.asByteData()));

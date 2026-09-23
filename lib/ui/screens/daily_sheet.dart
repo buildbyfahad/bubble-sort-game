@@ -8,6 +8,7 @@ import '../../services/wallet_service.dart';
 import '../app_scope.dart';
 import '../feedback.dart';
 import '../widgets/buttons.dart';
+import '../widgets/coin_flight.dart';
 import '../widgets/icons.dart';
 import '../widgets/surfaces.dart';
 
@@ -43,6 +44,13 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
   DailyReward? _claimed;
   bool _busy = false;
 
+  final CoinFlightController _coins = CoinFlightController();
+  final GlobalKey _ladderKey = GlobalKey();
+
+  /// Counts up as coins land, rather than being set when the claim resolves —
+  /// the number and the motion then agree by construction.
+  int _landed = 0;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +59,7 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
 
   @override
   void dispose() {
+    _coins.dispose();
     _c.dispose();
     super.dispose();
   }
@@ -71,20 +80,45 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
     setState(() {
       _claimed = reward;
       _busy = false;
+      _landed = 0;
     });
     _c.forward(from: 0);
+    _flyCoins(reward);
+  }
+
+  /// Throws the payout from the ladder rung that was claimed up to the
+  /// balance pill on the menu behind the sheet.
+  void _flyCoins(DailyReward reward) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    final RenderBox? rung = _ladderKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || rung == null) return;
+    final Offset from = box.globalToLocal(rung.localToGlobal(rung.size.center(Offset.zero)));
+    // The balance pill sits top-left of the menu underneath.
+    final Offset to = box.globalToLocal(const Offset(120, 84));
+    sendCoins(
+      context,
+      _coins,
+      from: from,
+      to: to,
+      amount: reward.coins,
+      onTick: () {
+        if (mounted) setState(() => _landed++);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final AppScope scope = AppScope.of(context);
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(DS.s16),
-          child: Observes(
+    return Stack(
+      children: <Widget>[
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(DS.s16),
+              child: Observes(
             listenables: <Listenable>[scope.wallet],
             builder: (BuildContext context) {
               final WalletService w = scope.wallet;
@@ -144,6 +178,7 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
 
                     // --- the ladder ------------------------------------------
                     Row(
+                      key: _ladderKey,
                       children: <Widget>[
                         for (int d = 1; d <= 7; d++) ...<Widget>[
                           if (d > 1) const SizedBox(width: DS.s4),
@@ -185,10 +220,14 @@ class _DailyRewardSheetState extends State<DailyRewardSheet>
                   ],
                 ),
               );
-            },
+                },
+              ),
+            ),
           ),
         ),
-      ),
+        // Painted over the sheet, so coins are seen leaving the ladder.
+        Positioned.fill(child: CoinFlight(controller: _coins)),
+      ],
     );
   }
 

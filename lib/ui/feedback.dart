@@ -56,6 +56,15 @@ abstract final class Fx {
     s?.haptics.reject();
   }
 
+  /// One coin arriving in the balance during a payout flight. Deliberately
+  /// the lightest thing in the vocabulary — a dozen of these fire in half a
+  /// second, and anything heavier becomes a machine gun.
+  static void coinLand(BuildContext context) {
+    final AppScope? s = AppScope.maybeOf(context);
+    s?.audio.tick();
+    s?.haptics.select();
+  }
+
   // -------------------------------------------------------------- rewards
 
   /// Something was bought or earned.

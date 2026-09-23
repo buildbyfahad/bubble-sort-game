@@ -4,6 +4,17 @@ A colour-sorting puzzle. Familiar mechanic, entirely original product identity:
 name, mark, palette, typography, vessel and ball rendering, motion, icon set and
 sound are all authored here and reference no existing game.
 
+## Typography
+
+**Baloo 2**, a rounded variable face (SIL Open Font License; the licence ships
+beside the font in `assets/fonts/`). One face for everything — display and UI.
+
+The game ran on Sora and Inter for a long time. Both are excellent geometric
+grotesques and both read as *corporate* however heavily they are set, which is
+most of why play-testing kept calling the UI "outdated, not like a gaming
+thing" even after the palette went bright. Rounded terminals are doing more
+work here than any colour choice.
+
 ## A note on the palette change
 
 This document previously argued for a near-black ground with a single gold
